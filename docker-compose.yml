@@ -1,0 +1,18 @@
+services:
+  api:
+    build: ./api
+    env_file: .env
+    environment:
+      DUCKDB_PATH: /data/pulse.duckdb
+    volumes:
+      - pulse-data:/data
+    ports: ["8000:8000"]
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+volumes:
+  pulse-data:
