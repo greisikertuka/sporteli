@@ -1,0 +1,26 @@
+[project]
+name = "elbasan-pulse-api"
+version = "0.1.0"
+description = "Elbasan Pulse API — municipal data integration & decision support"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "duckdb>=1.1",
+    "anthropic>=0.40",
+    "pydantic-settings>=2.6",
+    "python-multipart>=0.0.12",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "httpx>=0.27", "ruff>=0.8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
