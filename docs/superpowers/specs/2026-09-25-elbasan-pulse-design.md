@@ -61,7 +61,7 @@ Most dashboards assume data is already unified. Elbasan Pulse treats **integrati
 
 | Unit | Responsibility | Depends on |
 |---|---|---|
-| `web/` (Next.js 15, TS, Tailwind, shadcn/ui, ECharts) | UI: dashboard, ingest wizard, copilot, briefing; i18n sq/en | API only |
+| `web/` (Next.js 16, TS, Tailwind, shadcn/ui, ECharts) | UI: dashboard, ingest wizard, copilot, briefing; i18n sq/en | API only |
 | `api/app/ingest` | Parse CSV/XLSX, profile columns, request mapping proposal, apply confirmed mapping, write lineage | warehouse, llm |
 | `api/app/warehouse` | DuckDB connection, canonical schema DDL, metric views | DuckDB |
 | `api/app/copilot` | NL question → SQL (Sonnet) → SQL guard → execute → chart spec + answer | warehouse, llm, sqlguard |

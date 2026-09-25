@@ -1,0 +1,50 @@
+{
+  "app": {
+    "name": "Elbasan Pulse",
+    "tagline": "Të dhënat e bashkisë, në një vend",
+    "municipality": "Bashkia Elbasan"
+  },
+  "nav": {
+    "section": "Paneli",
+    "overview": "Përmbledhje",
+    "ingest": "Integro të dhëna",
+    "ask": "Pyet të dhënat",
+    "briefing": "Raporti mujor"
+  },
+  "header": {
+    "language": "Gjuha",
+    "theme": "Tema",
+    "light": "E çelët",
+    "dark": "E errët",
+    "system": "Sistemi"
+  },
+  "status": {
+    "online": "API aktive",
+    "offline": "API jashtë linje",
+    "aiOn": "AI aktive",
+    "aiOff": "AI joaktive",
+    "checking": "Duke kontrolluar…"
+  },
+  "pages": {
+    "overview": {
+      "title": "Përmbledhje",
+      "description": "Treguesit kryesorë të shërbimeve dhe kërkesave të qytetarëve.",
+      "empty": "Ende nuk ka të dhëna. Filloni duke integruar një burim."
+    },
+    "ingest": {
+      "title": "Integro të dhëna",
+      "description": "Ngarkoni eksporte nga sistemet e drejtorive dhe lidhini me modelin e përbashkët.",
+      "empty": "Ngarkimi i të dhënave do të jetë i disponueshëm së shpejti."
+    },
+    "ask": {
+      "title": "Pyet të dhënat",
+      "description": "Bëni pyetje në gjuhë natyrore. Çdo përgjigje tregon burimin dhe pyetjen SQL.",
+      "empty": "Asistenti do të jetë i disponueshëm së shpejti."
+    },
+    "briefing": {
+      "title": "Raporti mujor",
+      "description": "Përmbledhje e gjeneruar për drejtuesit e bashkisë.",
+      "empty": "Raporti do të jetë i disponueshëm së shpejti."
+    }
+  }
+}

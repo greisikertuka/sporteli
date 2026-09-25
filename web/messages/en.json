@@ -1,0 +1,50 @@
+{
+  "app": {
+    "name": "Elbasan Pulse",
+    "tagline": "Municipal data, in one place",
+    "municipality": "Municipality of Elbasan"
+  },
+  "nav": {
+    "section": "Dashboard",
+    "overview": "Overview",
+    "ingest": "Integrate data",
+    "ask": "Ask the data",
+    "briefing": "Monthly briefing"
+  },
+  "header": {
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "status": {
+    "online": "API online",
+    "offline": "API offline",
+    "aiOn": "AI on",
+    "aiOff": "AI off",
+    "checking": "Checking…"
+  },
+  "pages": {
+    "overview": {
+      "title": "Overview",
+      "description": "Key indicators for services and citizen requests.",
+      "empty": "No data yet. Start by integrating a source."
+    },
+    "ingest": {
+      "title": "Integrate data",
+      "description": "Upload exports from department systems and map them to the shared model.",
+      "empty": "Data upload is coming soon."
+    },
+    "ask": {
+      "title": "Ask the data",
+      "description": "Ask questions in plain language. Every answer shows its source and SQL.",
+      "empty": "The copilot is coming soon."
+    },
+    "briefing": {
+      "title": "Monthly briefing",
+      "description": "Generated summary for municipal leadership.",
+      "empty": "The briefing is coming soon."
+    }
+  }
+}
