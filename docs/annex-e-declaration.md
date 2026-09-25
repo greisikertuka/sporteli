@@ -1,6 +1,6 @@
 # Annex E: Declaration of AI Tools & Pre-Existing Components (draft)
 
-**Team name:**
+**Team name:** FirmatGroup
 **Challenge track:** D — Municipal Data Integration & Decision-Support Dashboard
 
 ## AI tools used

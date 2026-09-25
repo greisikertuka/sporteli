@@ -3,7 +3,7 @@
 **One place for Elbasan's municipal data.** Any department export is onboarded in minutes with
 AI-assisted mapping, then turned into KPIs, trends and answers that leadership can trust.
 
-Built at the AI4Society Youth Innovation Hackathon (Tirana, 25–27 Sept 2026),
+Built by **FirmatGroup** at the AI4Society Youth Innovation Hackathon (Tirana, 25–27 Sept 2026),
 **Track D: Municipal Data Integration & Decision-Support Dashboard**, for the Municipality of Elbasan.
 
 ## Features
