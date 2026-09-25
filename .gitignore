@@ -1,0 +1,13 @@
+.remember/
+node_modules/
+.next/
+__pycache__/
+.venv/
+*.duckdb
+*.duckdb.wal
+.env
+.env.local
+.pytest_cache/
+.ruff_cache/
+data/uploads/
+.DS_Store
