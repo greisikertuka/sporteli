@@ -84,7 +84,7 @@ Adjusting fields to the actual data package is expected; the architecture does n
 
 ### 4.3 Models
 
-- Column mapping: `claude-haiku-4-5-20251001` (cheap, structured JSON output)
+- Column mapping: `claude-haiku-4-5` (cheap, structured JSON output)
 - Copilot SQL + briefing: `claude-sonnet-5`
 - Budget: organiser cap of USD 25–50; `llm` wrapper logs token usage and fails gracefully.
 
