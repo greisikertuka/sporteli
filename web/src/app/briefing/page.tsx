@@ -1,5 +1,4 @@
-import { EmptyPage } from "@/components/page-shell";
-
+import { Briefing } from "@/components/pulse/briefing";
 export default function BriefingPage() {
-  return <EmptyPage page="briefing" />;
+  return <Briefing />;
 }

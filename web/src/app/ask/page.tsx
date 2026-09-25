@@ -1,5 +1,4 @@
-import { EmptyPage } from "@/components/page-shell";
-
+import { Ask } from "@/components/pulse/ask";
 export default function AskPage() {
-  return <EmptyPage page="ask" />;
+  return <Ask />;
 }

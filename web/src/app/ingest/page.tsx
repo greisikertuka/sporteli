@@ -1,5 +1,4 @@
-import { EmptyPage } from "@/components/page-shell";
-
+import { Sources } from "@/components/pulse/sources";
 export default function IngestPage() {
-  return <EmptyPage page="ingest" />;
+  return <Sources />;
 }

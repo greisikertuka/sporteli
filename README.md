@@ -6,7 +6,22 @@ AI-assisted mapping, then turned into KPIs, trends and answers that leadership c
 Built by **FirmatGroup** at the AI4Society Youth Innovation Hackathon (Tirana, 25–27 Sept 2026),
 **Track D: Municipal Data Integration & Decision-Support Dashboard**, for the Municipality of Elbasan.
 
-## Features
+## Current demo
+
+The responsive frontend includes a filterable overview, source details, a local CSV preview
+with column mapping, supported sample questions, and a printable/downloadable monthly report.
+It supports Albanian and English, light and dark themes, keyboard navigation, and reduced motion.
+The civic mark, chart transitions, and source-flow animation are built with SVG and CSS.
+
+All dashboard figures are clearly labeled synthetic data. CSV previews stay in the browser and
+do not save records. Sample answers use deterministic calculations; their displayed SQL is
+illustrative. Live ingestion, warehouse queries, and AI answers are not connected yet. The API
+currently provides the health endpoint.
+
+To explore the UI alone: `cd web && pnpm install && pnpm dev`, then open
+[localhost:3000](http://localhost:3000). The API status correctly shows offline when it is not running.
+
+## Product roadmap
 
 | Brief | Feature |
 |---|---|

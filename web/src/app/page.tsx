@@ -1,5 +1,4 @@
-import { EmptyPage } from "@/components/page-shell";
-
+import { Overview } from "@/components/pulse/overview";
 export default function OverviewPage() {
-  return <EmptyPage page="overview" />;
+  return <Overview />;
 }

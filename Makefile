@@ -15,6 +15,7 @@ dev:
 
 test:
 	cd api && uv run pytest -q
+	cd web && pnpm test
 
 lint:
 	cd api && uv run ruff check . && uv run ruff format --check .
