@@ -342,7 +342,7 @@
   "ask": {
     "kicker": "Pyet të dhënat · katër etiketa",
     "title": "Një pyetje. Një përgjigje me provë, ose arsyeja pse nuk ka.",
-    "description": "Etiketa vendoset nga kodi, jo nga modeli. Çdo numër lidhet me skedarin dhe rreshtat burimorë nga vjen.",
+    "description": "Etiketën e vendos Sportel, jo AI-ja. Çdo numër lidhet me skedarin dhe rreshtat nga vjen.",
     "label": "Pyetja juaj",
     "placeholder": "p.sh. Sa përqind e kërkesave u zgjidhën brenda afatit në gusht?",
     "submit": "Pyet",
@@ -350,29 +350,36 @@
     "examples": "Pyetje shembull",
     "exampleKind": {
       "verified": "me provë",
-      "gap": "mangësi",
+      "gap": "mungojnë të dhënat",
       "exploratory": "eksploruese",
       "blocked": "e bllokuar"
     },
     "empty": "Shkruani një pyetje ose zgjidhni një shembull.",
     "interpreted": "Kuptuar si",
+    "method": "Si u llogarit",
     "sources": "Burimet",
     "rows": "rreshtat {rows}",
     "result": "Rezultati",
+    "columns": {
+      "department": "Drejtoria",
+      "on_time_pct_earlier": "Brenda afatit, muajt e mëparshëm (%)",
+      "on_time_pct_last_2_months": "Brenda afatit, dy muajt e fundit (%)"
+    },
     "gapTitle": "Mungon eksporti",
     "gapOwner": "Përgjegjës",
     "gapCta": "Ngarko eksportin",
     "gapSample": "Skedari: {name}",
     "blockedTitle": "Pse u bllokua",
     "passport": "Hap pasaportën {code}",
-    "llmRules": "Pa AI · rregulla",
-    "llmUsed": "AI · {model} · {latency} · {cost}",
-    "cached": "CACHED",
+    "llmRules": "U përgjigj pa AI",
+    "llmUsed": "AI ndihmoi në leximin e pyetjes ({model})",
+    "cached": "RIPËRDORUR",
+    "cachedHint": "U ripërdor leximi i mëparshëm i AI-së për të njëjtën pyetje; asgjë nuk iu dërgua sërish AI-së.",
     "history": "Pyetjet e mëparshme",
     "changed": "Më parë: {from}",
     "evalChip": "{matched} nga {total}",
-    "evalTitle": "Saktësia në grupin tonë prej {total} pyetjesh — vetëm orientuese, jo krahasim standard",
-    "evalNote": "Ekzekutuar më {time} · mënyra {mode}",
+    "evalTitle": "Provuar me {total} pyetje shembull të përgatitura nga ne — vetëm orientuese, jo krahasim standard",
+    "evalNote": "Prova e fundit: {time}",
     "legend": "Çfarë do të thotë etiketa",
     "ask": "Pyet: {question}",
     "emptyTitle": "Ende pa pyetje",
@@ -382,12 +389,12 @@
     "verified": {
       "name": "E verifikuar",
       "stamp": "E VERIFIKUAR",
-      "meaning": "Vlera vjen nga një pasaportë me SQL të fiksuar dhe të gjitha të dhënat e nevojshme janë ngarkuar."
+      "meaning": "Numri vjen nga një tregues i përcaktuar më parë, që llogaritet gjithmonë njësoj. Të gjithë skedarët që i duhen janë ngarkuar."
     },
     "exploratory": {
       "name": "Eksploruese",
       "stamp": "EKSPLORUESE",
-      "meaning": "Një SELECT i vetëm që kaloi kontrollin e sigurisë, por nuk është tregues i miratuar. Lexojeni si orientim."
+      "meaning": "Një vështrim i shpejtë në skedarët e ngarkuar. Nuk është një nga treguesit e përcaktuar, ndaj merreni si vështrim të parë."
     },
     "not_answerable": {
       "name": "Pa përgjigje",
@@ -397,7 +404,7 @@
     "blocked": {
       "name": "E bllokuar",
       "stamp": "E BLLOKUAR",
-      "meaning": "Kërkesa prek të dhëna personale, shkruan në bazë ose del jashtë tabelave të lejuara. Nuk ekzekutohet."
+      "meaning": "Pyetja kërkon të dhëna personale, synon të ndryshojë të dhënat ose prek të dhëna të mbrojtura. Sportel nuk i përgjigjet."
     }
   },
   "coverage": {

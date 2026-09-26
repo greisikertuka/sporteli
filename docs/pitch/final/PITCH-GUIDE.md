@@ -20,8 +20,8 @@ Why this wins on the scorecard:
 
 1. **Paneli (the board):** 13 indicator tiles. **Green** means computed, with proof. **Grey** means *"MUNGON EKSPORTI · Përgjegjës: Drejtoria X"*: that directorate has not sent its file. The box *"Për drejtuesit, këtë muaj"* shows the head of department **whom to ask** and **which indicators are off target**. These are the decisions.
 2. **Pyet të dhënat (ask):** a question gets one of 4 stamps, and **code** decides which:
-   - **E VERIFIKUAR:** an official formula ran; the SQL and source rows are shown.
-   - **EKSPLORUESE:** a one-off query; read it with care.
+   - **E VERIFIKUAR:** an official formula ran; the answer shows it in plain words (*Si u llogarit*) and the source files and rows.
+   - **EKSPLORUESE:** a quick look at the data, not a defined indicator; read it with care.
    - **E BLLOKUAR:** for example, a request for names or phones is refused.
    - **PA PËRGJIGJE:** the data is missing; Sportel names the missing file and its owner and guesses nothing.
 3. **Integro të dhëna (upload):** drop an Excel or CSV file. Code finds the header, the units (`000 lekë` ×1,000) and the TOTAL row, and **removes personal columns before the AI**. The AI (or the rules, without a key) proposes which column means what: green means sure, amber needs a click. A person confirms. A "recipe" is saved, so next month the same file loads in one click. If the layout changes, Sportel stops and asks.

@@ -302,6 +302,9 @@ export type AskAnswer = {
   gap: { dataset: string; name: L10n; owner: L10n; sample: string | null } | null;
   blocked_reason: L10n | null;
   llm: { used: boolean; model: string | null; latency_ms: number | null; cost_usd: number | null; cached: boolean };
+  /** How the number is calculated, in plain words (the passport's formula). Additive: older
+   * API versions and recordings may omit it. `sql` stays for machines; the Ask page never shows it. */
+  method?: L10n | null;
 };
 // GET /ask/examples
 export type AskExample = {

@@ -24,7 +24,7 @@ cursor and captions), after a demo reset. The file is `demo/sportel-demo.mp4`.
 | | Column mapping | The AI proposes all 5 columns (in this take it was confident on every one; if a row is amber, a person clicks **Confirm**) → **Confirm and load** | "The AI read column names only. No values left the server." / "A person checks the mapping, then loads the file." |
 | 42–50 s | Load receipt | **104 loaded**, and the total row matches the file | "Every row counted. The totals match the file's own total." |
 | 50–60 s | Board | **9/13**. The same waste tiles now show values: 25,621 t collected, 316.6 kg per resident, 10,526 lek per tonne (synthetic) | "The waste KPIs are no longer empty, and each has its proof." |
-| 60–74 s | Ask the data | The same question → **VERIFIED**, 316.6 kg/resident/year, scroll to **Sources** (the hand-built CSV plus the population file, with row ranges) | "Same question: verified, with the exact source rows." |
+| 60–74 s | Ask the data | The same question → **VERIFIED**, 316.6 kg/resident/year, scroll past **How it was calculated** (the formula in plain words) to **Sources** (the hand-built CSV plus the population file, with row ranges) | "Same question: verified, with the exact source rows." |
 | 74–77 s | End | — | "Sportel · Report once, prove every number." |
 
 **In the pitch:** play it on slide 3 and speak the slide-3 notes over it. The captions carry the

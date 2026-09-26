@@ -2143,6 +2143,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat e mbyllura brenda afatit (ditët nga regjistrimi te mbyllja ≤ afati në ditë) ÷ të gjitha kërkesat e mbyllura në periudhë × 100.",
+     "en": "Requests closed within their deadline (days from registration to closing ≤ deadline in days) ÷ all requests closed in the period × 100."
     }
    },
    "verified-fin-02": {
@@ -2176,6 +2180,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike kapitale ÷ shpenzimet kapitale të planifikuara të periudhës (janar – muaji i fundit) × 100.",
+     "en": "Actual capital spending ÷ planned capital spending for the period (January to the latest month) × 100."
     }
    },
    "gap-wst-02": {
@@ -2214,7 +2222,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "gap-rev-02": {
     "label": "verified",
@@ -2252,6 +2261,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Tarifa e pastrimit e arkëtuar ÷ shpenzimet faktike të programit 05100 Menaxhimi i mbetjeve × 100 (bashkon dy eksporte: të ardhurat vendore dhe zbatimin e buxhetit).",
+     "en": "Cleaning fee collected ÷ actual spending of programme 05100 Waste management × 100 (joins two exports: local revenue and budget execution)."
     }
    },
    "gap-hr-01": {
@@ -2290,18 +2303,19 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "exploratory-directorates": {
     "label": "exploratory",
     "question": "Si ka ndryshuar zgjidhja brenda afatit sipas drejtorive në dy muajt e fundit?",
     "interpreted_as": {
-     "sq": "Pyetje eksploruese · SQL e përgatitur për shembullin (AI jashtë linje) · tabela: request",
-     "en": "Exploratory query · Prepared SQL for this example (AI offline) · tables: request"
+     "sq": "Vështrim i shpejtë në të dhënat · shembull i përgatitur · nga: Kërkesat qytetare",
+     "en": "Quick look at the data · prepared example · from: Citizen requests"
     },
     "answer": {
-     "sq": "Rezultati i pyetjes eksploruese: 6 rreshta. Nuk është tregues i verifikuar: kontrolloni SQL-në para se ta përdorni.",
-     "en": "Exploratory result: 6 rows. Not a verified indicator: check the SQL before relying on it."
+     "sq": "Rezultati i pyetjes eksploruese: 6 rreshta. Nuk është tregues i verifikuar: merreni si një vështrim të parë, jo si shifër përfundimtare.",
+     "en": "Exploratory result: 6 rows. Not a verified indicator: treat it as a first look, not a final figure."
     },
     "value": null,
     "unit": null,
@@ -2361,7 +2375,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "blocked-personal": {
     "label": "blocked",
@@ -2371,8 +2386,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "en": "Request for personal data"
     },
     "answer": {
-     "sq": "E bllokuar: nuk u ekzekutua asnjë pyetje dhe nuk u dha asnjë numër.",
-     "en": "Blocked: no query was run and no number was returned."
+     "sq": "E bllokuar: nuk u kërkua asgjë në të dhëna dhe nuk u dha asnjë numër.",
+     "en": "Blocked: nothing was looked up in the data and no number was given."
     },
     "value": null,
     "unit": null,
@@ -2382,8 +2397,8 @@ export const SNAPSHOT: ReplaySnapshot = {
     "sources": [],
     "gap": null,
     "blocked_reason": {
-     "sq": "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). Kolonat personale hiqen gjatë ngarkimit dhe copilot-i nuk jep të dhëna për persona.",
-     "en": "The question asks for personal data (names, phones, addresses or data about individuals). Personal columns are removed on load and the copilot never returns data about people."
+     "sq": "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). Kolonat personale hiqen gjatë ngarkimit dhe Sportel nuk jep kurrë të dhëna për persona.",
+     "en": "The question asks for personal data (names, phones, addresses or data about individuals). Personal columns are removed on load and Sportel never returns data about people."
     },
     "llm": {
      "used": false,
@@ -2391,7 +2406,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    }
   }
  },
@@ -16287,6 +16303,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Numri i kërkesave të regjistruara nga 1 janari deri në fund të muajit të fundit me të dhëna.",
+     "en": "Number of requests registered from 1 January to the end of the latest month with data."
     }
    },
    "REQ-02": {
@@ -16320,6 +16340,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat e mbyllura brenda afatit (ditët nga regjistrimi te mbyllja ≤ afati në ditë) ÷ të gjitha kërkesat e mbyllura në periudhë × 100.",
+     "en": "Requests closed within their deadline (days from registration to closing ≤ deadline in days) ÷ all requests closed in the period × 100."
     }
    },
    "REQ-03": {
@@ -16353,6 +16377,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat pa datë mbylljeje në fund të muajit të fundit (përjashtuar të refuzuarat), për të cilat ditët nga regjistrimi janë më shumë se afati.",
+     "en": "Requests without a closing date at the end of the latest month (excluding rejected ones) whose days since registration exceed their deadline."
     }
    },
    "REQ-04": {
@@ -16386,6 +16414,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Mesatarja e ditëve nga regjistrimi te mbyllja, për kërkesat e mbyllura nga 1 janari deri në fund të muajit të fundit.",
+     "en": "Average days from registration to closing, for requests closed from 1 January to the end of the latest month."
     }
    },
    "FIN-01": {
@@ -16419,6 +16451,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike ÷ shpenzimet e planifikuara të periudhës (të gjitha programet, korrente dhe kapitale, janar – muaji i fundit) × 100.",
+     "en": "Actual spending ÷ planned spending for the period (all programmes, current and capital, January to the latest month) × 100."
     }
    },
    "FIN-02": {
@@ -16452,6 +16488,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike kapitale ÷ shpenzimet kapitale të planifikuara të periudhës (janar – muaji i fundit) × 100.",
+     "en": "Actual capital spending ÷ planned capital spending for the period (January to the latest month) × 100."
     }
    },
    "WST-01": {
@@ -16490,7 +16530,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "WST-02": {
     "label": "not_answerable",
@@ -16528,7 +16569,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "WST-03": {
     "label": "not_answerable",
@@ -16566,7 +16608,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "REV-01": {
     "label": "not_answerable",
@@ -16604,7 +16647,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "REV-02": {
     "label": "not_answerable",
@@ -16642,7 +16686,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "HR-01": {
     "label": "not_answerable",
@@ -16680,7 +16725,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "HR-02": {
     "label": "not_answerable",
@@ -16718,7 +16764,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    }
   },
   "full": {
@@ -16753,6 +16800,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Numri i kërkesave të regjistruara nga 1 janari deri në fund të muajit të fundit me të dhëna.",
+     "en": "Number of requests registered from 1 January to the end of the latest month with data."
     }
    },
    "REQ-02": {
@@ -16786,6 +16837,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat e mbyllura brenda afatit (ditët nga regjistrimi te mbyllja ≤ afati në ditë) ÷ të gjitha kërkesat e mbyllura në periudhë × 100.",
+     "en": "Requests closed within their deadline (days from registration to closing ≤ deadline in days) ÷ all requests closed in the period × 100."
     }
    },
    "REQ-03": {
@@ -16819,6 +16874,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat pa datë mbylljeje në fund të muajit të fundit (përjashtuar të refuzuarat), për të cilat ditët nga regjistrimi janë më shumë se afati.",
+     "en": "Requests without a closing date at the end of the latest month (excluding rejected ones) whose days since registration exceed their deadline."
     }
    },
    "REQ-04": {
@@ -16852,6 +16911,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Mesatarja e ditëve nga regjistrimi te mbyllja, për kërkesat e mbyllura nga 1 janari deri në fund të muajit të fundit.",
+     "en": "Average days from registration to closing, for requests closed from 1 January to the end of the latest month."
     }
    },
    "FIN-01": {
@@ -16885,6 +16948,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike ÷ shpenzimet e planifikuara të periudhës (të gjitha programet, korrente dhe kapitale, janar – muaji i fundit) × 100.",
+     "en": "Actual spending ÷ planned spending for the period (all programmes, current and capital, January to the latest month) × 100."
     }
    },
    "FIN-02": {
@@ -16918,6 +16985,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike kapitale ÷ shpenzimet kapitale të planifikuara të periudhës (janar – muaji i fundit) × 100.",
+     "en": "Actual capital spending ÷ planned capital spending for the period (January to the latest month) × 100."
     }
    },
    "WST-01": {
@@ -16951,6 +17022,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shuma e sasisë së mbetjeve të grumbulluara (ton), të gjitha njësitë administrative, nga 1 janari deri në fund të muajit të fundit.",
+     "en": "Sum of waste collected (tonnes), all administrative units, from 1 January to the end of the latest month."
     }
    },
    "WST-02": {
@@ -16989,6 +17064,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Tonët e grumbulluar × 1.000 ÷ banorët (sipas bazës së zgjedhur të popullsisë), të përvitësuar: × 12 ÷ numri i muajve me të dhëna.",
+     "en": "Tonnes collected × 1,000 ÷ residents (pinned population basis), annualised: × 12 ÷ number of months with data."
     }
    },
    "WST-03": {
@@ -17027,6 +17106,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike të programit 05100 Menaxhimi i mbetjeve (korrente dhe kapitale) ÷ tonët e grumbulluar, janar – muaji i fundit i përbashkët i dy eksporteve.",
+     "en": "Actual spending of programme 05100 Waste management (current and capital) ÷ tonnes collected, January to the latest month present in both exports."
     }
    },
    "REV-01": {
@@ -17060,6 +17143,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Të ardhurat e arkëtuara ÷ të ardhurat e planifikuara të periudhës (të gjitha llojet dhe paguesit, janar – muaji i fundit) × 100.",
+     "en": "Revenue collected ÷ revenue planned for the period (all types and payers, January to the latest month) × 100."
     }
    },
    "REV-02": {
@@ -17098,6 +17185,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Tarifa e pastrimit e arkëtuar ÷ shpenzimet faktike të programit 05100 Menaxhimi i mbetjeve × 100 (bashkon dy eksporte: të ardhurat vendore dhe zbatimin e buxhetit).",
+     "en": "Cleaning fee collected ÷ actual spending of programme 05100 Waste management × 100 (joins two exports: local revenue and budget execution)."
     }
    },
    "HR-01": {
@@ -17136,6 +17227,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Numri i punonjësve në datën e fundit të gjendjes ÷ banorët (sipas bazës së zgjedhur të popullsisë) × 1.000.",
+     "en": "Headcount at the latest reporting date ÷ residents (pinned population basis) × 1,000."
     }
    },
    "HR-02": {
@@ -17169,6 +17264,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Largimet gjatë vitit ÷ numri mesatar i punonjësve × 100; numri mesatar = (numri në fund + numri në fillim) ÷ 2, ku numri në fillim = numri në fund − pranimet + largimet.",
+     "en": "Leavers during the year ÷ average headcount × 100; average headcount = (end headcount + start headcount) ÷ 2, where start headcount = end headcount − hires + leavers."
     }
    }
   },
@@ -17209,6 +17308,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Tonët e grumbulluar × 1.000 ÷ banorët (sipas bazës së zgjedhur të popullsisë), të përvitësuar: × 12 ÷ numri i muajve me të dhëna.",
+     "en": "Tonnes collected × 1,000 ÷ residents (pinned population basis), annualised: × 12 ÷ number of months with data."
     }
    },
    "HR-01": {
@@ -17247,6 +17350,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Numri i punonjësve në datën e fundit të gjendjes ÷ banorët (sipas bazës së zgjedhur të popullsisë) × 1.000.",
+     "en": "Headcount at the latest reporting date ÷ residents (pinned population basis) × 1,000."
     }
    }
   },
@@ -17282,6 +17389,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat e mbyllura brenda afatit (ditët nga regjistrimi te mbyllja ≤ afati në ditë) ÷ të gjitha kërkesat e mbyllura në periudhë × 100.",
+     "en": "Requests closed within their deadline (days from registration to closing ≤ deadline in days) ÷ all requests closed in the period × 100."
     }
    },
    "verified-fin-02": {
@@ -17315,6 +17426,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike kapitale ÷ shpenzimet kapitale të planifikuara të periudhës (janar – muaji i fundit) × 100.",
+     "en": "Actual capital spending ÷ planned capital spending for the period (January to the latest month) × 100."
     }
    },
    "gap-wst-02": {
@@ -17353,7 +17468,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "gap-rev-02": {
     "label": "not_answerable",
@@ -17391,7 +17507,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "gap-hr-01": {
     "label": "not_answerable",
@@ -17429,18 +17546,19 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "exploratory-directorates": {
     "label": "exploratory",
     "question": "Si ka ndryshuar zgjidhja brenda afatit sipas drejtorive në dy muajt e fundit?",
     "interpreted_as": {
-     "sq": "Pyetje eksploruese · SQL e përgatitur për shembullin (AI jashtë linje) · tabela: request",
-     "en": "Exploratory query · Prepared SQL for this example (AI offline) · tables: request"
+     "sq": "Vështrim i shpejtë në të dhënat · shembull i përgatitur · nga: Kërkesat qytetare",
+     "en": "Quick look at the data · prepared example · from: Citizen requests"
     },
     "answer": {
-     "sq": "Rezultati i pyetjes eksploruese: 6 rreshta. Nuk është tregues i verifikuar: kontrolloni SQL-në para se ta përdorni.",
-     "en": "Exploratory result: 6 rows. Not a verified indicator: check the SQL before relying on it."
+     "sq": "Rezultati i pyetjes eksploruese: 6 rreshta. Nuk është tregues i verifikuar: merreni si një vështrim të parë, jo si shifër përfundimtare.",
+     "en": "Exploratory result: 6 rows. Not a verified indicator: treat it as a first look, not a final figure."
     },
     "value": null,
     "unit": null,
@@ -17500,7 +17618,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "blocked-personal": {
     "label": "blocked",
@@ -17510,8 +17629,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "en": "Request for personal data"
     },
     "answer": {
-     "sq": "E bllokuar: nuk u ekzekutua asnjë pyetje dhe nuk u dha asnjë numër.",
-     "en": "Blocked: no query was run and no number was returned."
+     "sq": "E bllokuar: nuk u kërkua asgjë në të dhëna dhe nuk u dha asnjë numër.",
+     "en": "Blocked: nothing was looked up in the data and no number was given."
     },
     "value": null,
     "unit": null,
@@ -17521,8 +17640,8 @@ export const SNAPSHOT: ReplaySnapshot = {
     "sources": [],
     "gap": null,
     "blocked_reason": {
-     "sq": "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). Kolonat personale hiqen gjatë ngarkimit dhe copilot-i nuk jep të dhëna për persona.",
-     "en": "The question asks for personal data (names, phones, addresses or data about individuals). Personal columns are removed on load and the copilot never returns data about people."
+     "sq": "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). Kolonat personale hiqen gjatë ngarkimit dhe Sportel nuk jep kurrë të dhëna për persona.",
+     "en": "The question asks for personal data (names, phones, addresses or data about individuals). Personal columns are removed on load and Sportel never returns data about people."
     },
     "llm": {
      "used": false,
@@ -17530,7 +17649,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    }
   },
   "examples_full": {
@@ -17565,6 +17685,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Kërkesat e mbyllura brenda afatit (ditët nga regjistrimi te mbyllja ≤ afati në ditë) ÷ të gjitha kërkesat e mbyllura në periudhë × 100.",
+     "en": "Requests closed within their deadline (days from registration to closing ≤ deadline in days) ÷ all requests closed in the period × 100."
     }
    },
    "verified-fin-02": {
@@ -17598,6 +17722,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Shpenzimet faktike kapitale ÷ shpenzimet kapitale të planifikuara të periudhës (janar – muaji i fundit) × 100.",
+     "en": "Actual capital spending ÷ planned capital spending for the period (January to the latest month) × 100."
     }
    },
    "gap-wst-02": {
@@ -17636,6 +17764,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Tonët e grumbulluar × 1.000 ÷ banorët (sipas bazës së zgjedhur të popullsisë), të përvitësuar: × 12 ÷ numri i muajve me të dhëna.",
+     "en": "Tonnes collected × 1,000 ÷ residents (pinned population basis), annualised: × 12 ÷ number of months with data."
     }
    },
    "gap-rev-02": {
@@ -17674,6 +17806,10 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Tarifa e pastrimit e arkëtuar ÷ shpenzimet faktike të programit 05100 Menaxhimi i mbetjeve × 100 (bashkon dy eksporte: të ardhurat vendore dhe zbatimin e buxhetit).",
+     "en": "Cleaning fee collected ÷ actual spending of programme 05100 Waste management × 100 (joins two exports: local revenue and budget execution)."
     }
    },
    "gap-hr-01": {
@@ -17712,18 +17848,22 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
+    },
+    "method": {
+     "sq": "Numri i punonjësve në datën e fundit të gjendjes ÷ banorët (sipas bazës së zgjedhur të popullsisë) × 1.000.",
+     "en": "Headcount at the latest reporting date ÷ residents (pinned population basis) × 1,000."
     }
    },
    "exploratory-directorates": {
     "label": "exploratory",
     "question": "Si ka ndryshuar zgjidhja brenda afatit sipas drejtorive në dy muajt e fundit?",
     "interpreted_as": {
-     "sq": "Pyetje eksploruese · SQL e përgatitur për shembullin (AI jashtë linje) · tabela: request",
-     "en": "Exploratory query · Prepared SQL for this example (AI offline) · tables: request"
+     "sq": "Vështrim i shpejtë në të dhënat · shembull i përgatitur · nga: Kërkesat qytetare",
+     "en": "Quick look at the data · prepared example · from: Citizen requests"
     },
     "answer": {
-     "sq": "Rezultati i pyetjes eksploruese: 6 rreshta. Nuk është tregues i verifikuar: kontrolloni SQL-në para se ta përdorni.",
-     "en": "Exploratory result: 6 rows. Not a verified indicator: check the SQL before relying on it."
+     "sq": "Rezultati i pyetjes eksploruese: 6 rreshta. Nuk është tregues i verifikuar: merreni si një vështrim të parë, jo si shifër përfundimtare.",
+     "en": "Exploratory result: 6 rows. Not a verified indicator: treat it as a first look, not a final figure."
     },
     "value": null,
     "unit": null,
@@ -17783,7 +17923,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "blocked-personal": {
     "label": "blocked",
@@ -17793,8 +17934,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "en": "Request for personal data"
     },
     "answer": {
-     "sq": "E bllokuar: nuk u ekzekutua asnjë pyetje dhe nuk u dha asnjë numër.",
-     "en": "Blocked: no query was run and no number was returned."
+     "sq": "E bllokuar: nuk u kërkua asgjë në të dhëna dhe nuk u dha asnjë numër.",
+     "en": "Blocked: nothing was looked up in the data and no number was given."
     },
     "value": null,
     "unit": null,
@@ -17804,8 +17945,8 @@ export const SNAPSHOT: ReplaySnapshot = {
     "sources": [],
     "gap": null,
     "blocked_reason": {
-     "sq": "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). Kolonat personale hiqen gjatë ngarkimit dhe copilot-i nuk jep të dhëna për persona.",
-     "en": "The question asks for personal data (names, phones, addresses or data about individuals). Personal columns are removed on load and the copilot never returns data about people."
+     "sq": "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). Kolonat personale hiqen gjatë ngarkimit dhe Sportel nuk jep kurrë të dhëna për persona.",
+     "en": "The question asks for personal data (names, phones, addresses or data about individuals). Personal columns are removed on load and Sportel never returns data about people."
     },
     "llm": {
      "used": false,
@@ -17813,7 +17954,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    }
   },
   "free_text": {
@@ -17842,18 +17984,19 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    },
    "write": {
     "label": "blocked",
     "question": "DELETE FROM request",
     "interpreted_as": {
-     "sq": "Pyetje SQL e shkruar drejtpërdrejt",
-     "en": "SQL written directly"
+     "sq": "Komandë për bazën e të dhënave, e shkruar drejtpërdrejt",
+     "en": "A database command typed directly"
     },
     "answer": {
-     "sq": "E bllokuar: nuk u ekzekutua asnjë pyetje dhe nuk u dha asnjë numër.",
-     "en": "Blocked: no query was run and no number was returned."
+     "sq": "E bllokuar: nuk u kërkua asgjë në të dhëna dhe nuk u dha asnjë numër.",
+     "en": "Blocked: nothing was looked up in the data and no number was given."
     },
     "value": null,
     "unit": null,
@@ -17872,7 +18015,8 @@ export const SNAPSHOT: ReplaySnapshot = {
      "latency_ms": null,
      "cost_usd": null,
      "cached": false
-    }
+    },
+    "method": null
    }
   }
  }

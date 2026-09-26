@@ -181,14 +181,17 @@ const OVERLAY = () => {
 
   // 5 · Same question, now verified
   await nav("Ask the data");
-  await caption("Same question: verified, with the exact source rows.");
+  await caption("Same question: verified. A clear number, not a guess.");
   await click("button", "How many kilograms of waste per resident per year");
-  await sleep(2500);
-  const src = await locate("*", "Sources", { last: true }).catch(() => null);
-  await scrollBy(250);
-  await sleep(2200);
-  if (src) { await reveal(src); await moveTo(src, 800); }
   await sleep(3000);
+  const how = await locate("h3", "How it was calculated", { last: true }).catch(() => null);
+  if (how) { await reveal(how); await moveTo(how, 800); }
+  await caption("How it was calculated, in plain words.");
+  await sleep(3000);
+  const src = await locate("h3", "Sources", { last: true }).catch(() => null);
+  if (src) { await reveal(src); await moveTo(src, 800); }
+  await caption("And the exact file and rows every number came from.");
+  await sleep(3200);
 
   await caption("Sportel · Report once, prove every number.");
   await sleep(3000);

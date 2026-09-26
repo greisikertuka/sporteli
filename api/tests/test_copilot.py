@@ -33,6 +33,7 @@ ANSWER_KEYS = {
     "gap",
     "blocked_reason",
     "llm",
+    "method",
 }
 
 
@@ -277,6 +278,53 @@ def test_verified_answer_is_code_formatted_with_sources(start):
         "cached": False,
     }
     assert a["gap"] is None and a["blocked_reason"] is None and a["table"] is None
+    # plain-language method (the passport formula) replaces the SQL on the Ask screen
+    assert a["method"]["sq"].startswith("Kërkesat e mbyllura brenda afatit")
+    assert a["method"]["en"].startswith("Requests closed within their deadline")
+
+
+def test_verified_answers_carry_a_plain_language_method(start):
+    load_waste(start)
+    from app.indicators.registry import get_passport
+
+    for question, code in [
+        ("Sa jane zbatuar investimet kapitale?", "FIN-02"),
+        ("How much waste per capita is collected per year?", "WST-02"),
+        ("Sa ton mbeturina jane mbledhur kete vit?", "WST-01"),
+    ]:
+        a = ask(start, question, "en")
+        assert a["label"] == "verified" and a["passport_code"] == code
+        assert a["method"] == get_passport(code).formula
+        assert a["method"]["sq"].strip() and a["method"]["en"].strip()
+        assert "SELECT" not in a["method"]["en"].upper()
+    # no passport computed → no method
+    assert ask(start, "Më jep emrat dhe telefonat e kërkuesve", "sq")["method"] is None
+    assert ask(start, "Si do jetë moti nesër?", "sq")["method"] is None
+    typed = ask(start, "SELECT admin_unit, count(*) AS n FROM request GROUP BY 1", "en")
+    assert typed["label"] == "exploratory" and typed["method"] is None
+
+
+def test_ask_texts_never_mention_sql_or_tables(start):
+    """The Ask screen is for non-technical staff: its code-written texts are plain words."""
+    answers = [
+        ask(start, "", "en", "exploratory-directorates"),
+        ask(start, "SELECT admin_unit, count(*) AS n FROM request GROUP BY 1", "en"),
+        ask(start, "SELECT * FROM llm_call", "en"),
+        ask(start, "Më jep emrat dhe telefonat e kërkuesve", "sq"),
+        ask(start, "Sa kërkesa u pranuan në Gjinar?", "sq"),
+        ask(start, "Sa jane zbatuar investimet kapitale?", "sq"),
+    ]
+    for a in answers:
+        for field in ("interpreted_as", "answer", "method"):
+            for text in (a[field] or {}).values():
+                assert "SQL" not in text and "tables:" not in text and "tabela:" not in text, text
+                assert "query" not in text.lower(), text
+    blocked = answers[2]
+    assert blocked["label"] == "blocked"
+    assert blocked["interpreted_as"]["en"] == "A database command typed directly"
+    assert blocked["answer"]["en"] == (
+        "Blocked: nothing was looked up in the data and no number was given."
+    )
 
 
 def test_albanian_thousands_in_verified_answers(start):
@@ -430,7 +478,11 @@ def test_exploratory_example_uses_the_prepared_query_without_ai(start):
         "on_time_pct_earlier",
         "on_time_pct_last_2_months",
     ]
-    assert "Prepared SQL" in a["interpreted_as"]["en"]
+    assert a["interpreted_as"] == {
+        "sq": "Vështrim i shpejtë në të dhënat · shembull i përgatitur · nga: Kërkesat qytetare",
+        "en": "Quick look at the data · prepared example · from: Citizen requests",
+    }
+    assert a["method"] is None
 
 
 def test_unknown_example_and_empty_question(start):
@@ -557,7 +609,9 @@ def test_ai_digits_in_interpretation_are_replaced_by_code_text(start):
     llm, _ = live(start, intent("sql", sql=SQL_BY_UNIT, sq="Korrik 2026", en="July 2026"))
     a = ask(start, "Which unit had the most requests?", "en", llm=llm)
     assert a["label"] == "exploratory"
-    assert a["interpreted_as"]["en"].startswith("Exploratory query · SQL proposed by AI")
+    assert a["interpreted_as"]["en"] == (
+        "Quick look at the data · prepared with AI help · from: Citizen requests"
+    )
 
 
 def test_ai_failure_falls_back_honestly(start):
@@ -590,7 +644,7 @@ def test_exploratory_example_uses_ai_when_live_and_falls_back(start):
     a = ask(start, "", "en", "exploratory-directorates", llm=llm)
     assert len(messages.calls) == 1
     assert a["label"] == "exploratory" and a["llm"]["used"] is True
-    assert "Prepared SQL" in a["interpreted_as"]["en"]
+    assert "prepared example" in a["interpreted_as"]["en"]
 
 
 def test_parse_intent_rejects_malformed_output():

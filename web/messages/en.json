@@ -342,7 +342,7 @@
   "ask": {
     "kicker": "Ask the data · four labels",
     "title": "One question. An answer with proof, or the reason there is none.",
-    "description": "The label is decided by code, not by the model. Every number links back to the source file and rows it came from.",
+    "description": "Sportel decides the label, not the AI. Every number links back to the file and rows it came from.",
     "label": "Your question",
     "placeholder": "e.g. What share of requests was resolved on time in August?",
     "submit": "Ask",
@@ -350,29 +350,36 @@
     "examples": "Example questions",
     "exampleKind": {
       "verified": "with proof",
-      "gap": "gap",
+      "gap": "missing data",
       "exploratory": "exploratory",
       "blocked": "blocked"
     },
     "empty": "Type a question or choose an example.",
-    "interpreted": "Interpreted as",
+    "interpreted": "Understood as",
+    "method": "How it was calculated",
     "sources": "Sources",
     "rows": "rows {rows}",
     "result": "Result",
+    "columns": {
+      "department": "Directorate",
+      "on_time_pct_earlier": "On time, earlier months (%)",
+      "on_time_pct_last_2_months": "On time, last two months (%)"
+    },
     "gapTitle": "Missing export",
     "gapOwner": "Owner",
     "gapCta": "Upload the export",
     "gapSample": "File: {name}",
     "blockedTitle": "Why it was blocked",
     "passport": "Open passport {code}",
-    "llmRules": "No AI · rules",
-    "llmUsed": "AI · {model} · {latency} · {cost}",
-    "cached": "CACHED",
+    "llmRules": "Answered without AI",
+    "llmUsed": "AI helped read the question ({model})",
+    "cached": "REUSED",
+    "cachedHint": "The AI's earlier reading of this same question was reused; nothing was sent to the AI again.",
     "history": "Earlier questions",
     "changed": "Before: {from}",
     "evalChip": "{matched} of {total}",
-    "evalTitle": "Accuracy on our own {total}-question set — indicative only, not a benchmark",
-    "evalNote": "Run at {time} · mode {mode}",
+    "evalTitle": "Tested on our own {total} sample questions — indicative, not a benchmark",
+    "evalNote": "Last run {time}",
     "legend": "What the label means",
     "ask": "Ask: {question}",
     "emptyTitle": "No question yet",
@@ -382,12 +389,12 @@
     "verified": {
       "name": "Verified",
       "stamp": "VERIFIED",
-      "meaning": "The value comes from a passport with fixed SQL, and every dataset it needs is loaded."
+      "meaning": "The number comes from an indicator defined in advance and calculated the same way every time. Every file it needs is loaded."
     },
     "exploratory": {
       "name": "Exploratory",
       "stamp": "EXPLORATORY",
-      "meaning": "A single SELECT that passed the safety guard but is not an approved indicator. Read it as orientation."
+      "meaning": "A quick look at the loaded files. It is not one of the defined indicators, so treat it as a first look."
     },
     "not_answerable": {
       "name": "Not answerable",
@@ -397,7 +404,7 @@
     "blocked": {
       "name": "Blocked",
       "stamp": "BLOCKED",
-      "meaning": "The request touches personal data, writes to the database or leaves the allowed tables. It is not executed."
+      "meaning": "The question asks for personal data, tries to change data or reaches protected records. Sportel does not answer it."
     }
   },
   "coverage": {

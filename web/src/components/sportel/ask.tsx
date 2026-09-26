@@ -23,7 +23,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useApi, useReducedMotion } from "@/hooks/use-api";
 import { type AskAnswer, type AskEval, type AskExample, type AskLabel } from "@/lib/api";
 import { ask, getEval, getExamples, getPassport } from "@/lib/client";
-import { asLocale, formatCell, formatDateTime, formatIndicatorValue, formatMs, formatUsd, pick, summariseRanges } from "@/lib/format";
+import { asLocale, formatCell, formatDateTime, formatIndicatorValue, pick, summariseRanges } from "@/lib/format";
 import { ASK_LABEL_TONE, ASK_LABELS } from "@/lib/labels";
 
 import { useSystem } from "./system-context";
@@ -44,6 +44,16 @@ const KIND_ICON: Record<AskExample["kind"], React.ComponentType<{ "aria-hidden"?
 };
 
 type Entry = { id: number; answer: AskAnswer; exampleId?: string };
+
+/** A readable header for a column name chosen by a query: `admin_unit` → "Admin unit", `pct` → "%". */
+function humaniseColumn(name: string): string {
+  const text = name
+    .split(/_+/)
+    .filter(Boolean)
+    .map((w) => (w.toLowerCase() === "pct" ? "%" : w))
+    .join(" ");
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : name;
+}
 
 export function LabelStamp({ label, animate = false }: { label: AskLabel; animate?: boolean }) {
   const t = useTranslations("labels");
@@ -275,10 +285,7 @@ export function AskScreen({ passport }: { passport: string | null }) {
             {evalData && (
               <p className="fine-print">
                 {t("evalTitle", { total: evalData.by_label.reduce((s, r) => s + r.total, 0) })} ·{" "}
-                {t("evalNote", {
-                  time: formatDateTime(evalData.run_at, locale),
-                  mode: evalData.mode === "live" ? tAll("header.aiLive") : tAll("header.aiRules"),
-                })}
+                {t("evalNote", { time: formatDateTime(evalData.run_at, locale) })}
               </p>
             )}
           </div>
@@ -329,6 +336,12 @@ function AnswerCard({
       ? formatIndicatorValue(a.value, a.unit, locale, indicator ? pick(indicator.unit_label, locale) : undefined)
       : null;
   const tone = ASK_LABEL_TONE[a.label];
+  // Result columns are named by the query (e.g. `on_time_pct_last_2_months`): known ones get a
+  // translated header, any other is made readable.
+  const columnLabel = (name: string) => {
+    const key = `ask.columns.${name}`;
+    return /^[a-z0-9_]+$/i.test(name) && t.has(key) ? t(key) : humaniseColumn(name);
+  };
 
   return (
     <article ref={cardRef} className={`panel answer-card label-${a.label}`}>
@@ -361,6 +374,13 @@ function AnswerCard({
         </p>
       )}
       <p className="answer-text">{pick(a.answer, locale)}</p>
+
+      {a.method && (
+        <div className="answer-block">
+          <h3>{t("ask.method")}</h3>
+          <p>{pick(a.method, locale)}</p>
+        </div>
+      )}
 
       {a.gap && (
         <div className="gap-card">
@@ -402,7 +422,7 @@ function AnswerCard({
                 <tr>
                   {a.table.columns.map((c, j) => (
                     <th key={c} scope="col" className={typeof a.table!.rows[0]?.[j] === "number" ? "numeric" : undefined}>
-                      {c}
+                      {columnLabel(c)}
                     </th>
                   ))}
                 </tr>
@@ -447,14 +467,12 @@ function AnswerCard({
       <footer className="answer-foot">
         <span className="llm-line">
           {a.llm.used ? <Sparkles aria-hidden /> : <Cpu aria-hidden />}
-          {a.llm.used
-            ? t("ask.llmUsed", {
-                model: a.llm.model ?? "AI",
-                latency: formatMs(a.llm.latency_ms, locale),
-                cost: formatUsd(a.llm.cost_usd, locale),
-              })
-            : t("ask.llmRules")}
-          {a.llm.cached && <span className="cached-badge">{t("ask.cached")}</span>}
+          {a.llm.used ? t("ask.llmUsed", { model: a.llm.model ?? "AI" }) : t("ask.llmRules")}
+          {a.llm.cached && (
+            <span className="cached-badge" title={t("ask.cachedHint")}>
+              {t("ask.cached")}
+            </span>
+          )}
         </span>
         {a.passport_code && (
           <Link className="text-button" href={`/indicators/${encodeURIComponent(a.passport_code)}`}>

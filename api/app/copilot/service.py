@@ -11,7 +11,8 @@ Routing order for ``ask()``:
    - its datasets are missing → ``not_answerable`` with a gap card (export, owner, sample);
    - the question adds a filter or breakdown the passport cannot give (or another year) →
      the model (if live) or ``not_answerable`` with that reason;
-   - otherwise → ``verified``: the passport's fixed SQL, its template, its source rows;
+   - otherwise → ``verified``: the passport's fixed SQL, its template, its source rows, and
+     its plain-language formula as ``method`` (the Ask screen shows that, never the SQL);
 6. topic words for a dataset that is not loaded → ``not_answerable`` with a gap card;
 7. AI live → one structured intent call → passport (verified), guarded SQL (exploratory) or
    a refusal (blocked / not answerable);
@@ -87,9 +88,9 @@ class AskError(Exception):
 BLOCKED_REASONS: dict[str, L10n] = {
     "personal": t(
         "Pyetja kërkon të dhëna personale (emra, telefona, adresa ose të dhëna për individë). "
-        "Kolonat personale hiqen gjatë ngarkimit dhe copilot-i nuk jep të dhëna për persona.",
+        "Kolonat personale hiqen gjatë ngarkimit dhe Sportel nuk jep kurrë të dhëna për persona.",
         "The question asks for personal data (names, phones, addresses or data about "
-        "individuals). Personal columns are removed on load and the copilot never returns "
+        "individuals). Personal columns are removed on load and Sportel never returns "
         "data about people.",
     ),
     "write": t(
@@ -102,12 +103,20 @@ BLOCKED_REASONS: dict[str, L10n] = {
 BLOCKED_INTERPRETED: dict[str, L10n] = {
     "personal": t("Kërkesë për të dhëna personale", "Request for personal data"),
     "write": t("Kërkesë për të ndryshuar të dhënat", "Request to change data"),
-    "sql": t("Pyetje SQL e shkruar drejtpërdrejt", "SQL written directly"),
+    "sql": t(
+        "Komandë për bazën e të dhënave, e shkruar drejtpërdrejt",
+        "A database command typed directly",
+    ),
 }
 BLOCKED_ANSWER = t(
-    "E bllokuar: nuk u ekzekutua asnjë pyetje dhe nuk u dha asnjë numër.",
-    "Blocked: no query was run and no number was returned.",
+    "E bllokuar: nuk u kërkua asgjë në të dhëna dhe nuk u dha asnjë numër.",
+    "Blocked: nothing was looked up in the data and no number was given.",
 )
+EXPLORATORY_ORIGIN: dict[str, L10n] = {
+    "user": t("shkruar nga ju", "written by you"),
+    "ai": t("përgatitur me ndihmën e AI-së", "prepared with AI help"),
+    "prepared": t("shembull i përgatitur", "prepared example"),
+}
 FREE_TEXT = t(
     "Pyetje e lirë — nuk përputhet me asnjë tregues", "Free-text question — no indicator matches"
 )
@@ -126,6 +135,20 @@ def _interpreted_passport(p: Passport) -> L10n:
     return {
         "sq": f"Treguesi {p.code} · {p.name['sq']}",
         "en": f"Indicator {p.code} · {p.name['en']}",
+    }
+
+
+def _interpreted_exploratory(origin: str, tables: list[str]) -> L10n:
+    """Plain wording for an exploratory answer: who prepared it and which data it reads,
+    named by the datasets' display names (never table names or SQL)."""
+    how = EXPLORATORY_ORIGIN[origin]
+    names = {
+        loc: _join([dataset_for_table(tb).name[loc] for tb in tables], loc) or "—"
+        for loc in ("sq", "en")
+    }
+    return {
+        "sq": f"Vështrim i shpejtë në të dhënat · {how['sq']} · nga: {names['sq']}",
+        "en": f"Quick look at the data · {how['en']} · from: {names['en']}",
     }
 
 
@@ -164,6 +187,7 @@ def _base(question: str, **fields) -> dict:
         "gap": None,
         "blocked_reason": None,
         "llm": _no_llm(),
+        "method": None,
     }
     out.update(fields)
     return out
@@ -303,6 +327,7 @@ def _passport_answer(
             sql=res.sql,
             sources=sources,
             llm=llm or _no_llm(),
+            method=dict(p.formula),
         )
     return _base(
         question,
@@ -315,6 +340,7 @@ def _passport_answer(
         sql=res.sql,
         sources=sources,
         llm=llm or _no_llm(),
+        method=dict(p.formula),
     )
 
 
@@ -384,19 +410,7 @@ def _sql_answer(
         )
     tables = verdict.tables
     if interpreted is None:
-        origin_text = {
-            "user": t("SQL e shkruar nga përdoruesi", "SQL written by the user"),
-            "ai": t("SQL e propozuar nga AI", "SQL proposed by AI"),
-            "prepared": t(
-                "SQL e përgatitur për shembullin (AI jashtë linje)",
-                "Prepared SQL for this example (AI offline)",
-            ),
-        }[origin]
-        on = ", ".join(tables) or "—"
-        interpreted = {
-            "sq": f"Pyetje eksploruese · {origin_text['sq']} · tabela: {on}",
-            "en": f"Exploratory query · {origin_text['en']} · tables: {on}",
-        }
+        interpreted = _interpreted_exploratory(origin, tables)
     missing = [
         dataset_for_table(tb).key
         for tb in tables
@@ -413,10 +427,10 @@ def _sql_answer(
             question,
             interpreted_as=interpreted,
             answer=t(
-                "Pyetja eksploruese zgjati më shumë se kufiri i kohës dhe u ndërpre; nuk jepet "
-                "asnjë numër.",
-                "The exploratory query ran longer than the time limit and was stopped; no number "
-                "is given.",
+                "Ky vështrim në të dhënat zgjati më shumë se koha e lejuar dhe u ndërpre; nuk "
+                "jepet asnjë numër.",
+                "This look at the data took longer than allowed and was stopped; no number is "
+                "given.",
             ),
             sql=verdict.sql,
             llm=llm,
@@ -441,8 +455,8 @@ def _sql_answer(
             question,
             interpreted_as=interpreted,
             answer=t(
-                "Pyetja eksploruese nuk u ekzekutua dot (gabim në SQL); nuk jepet asnjë numër.",
-                "The exploratory query could not run (SQL error); no number is given.",
+                "Ky vështrim në të dhënat nuk u krye dot; nuk jepet asnjë numër.",
+                "This look at the data could not be completed; no number is given.",
             ),
             sql=verdict.sql,
             llm=llm,
@@ -450,8 +464,9 @@ def _sql_answer(
 
     value = _single_number(result.columns, result.rows)
     caveat = t(
-        " Nuk është tregues i verifikuar: kontrolloni SQL-në para se ta përdorni.",
-        " Not a verified indicator: check the SQL before relying on it.",
+        " Nuk është tregues i verifikuar: merreni si një vështrim të parë, jo si shifër "
+        "përfundimtare.",
+        " Not a verified indicator: treat it as a first look, not a final figure.",
     )
     if value is not None:
         answer = {
@@ -519,11 +534,12 @@ def _offline(
     if reason == "breakdown" and related is not None:
         answer = {
             "sq": "Kjo pyetje kërkon një ndarje ose filtër (p.sh. sipas muajit, njësisë ose "
-            f"drejtorisë) që treguesi {related.code} nuk e jep. Pa AI nuk ndërtohet pyetje e re "
-            "— provo një pyetje shembull ose pyet për treguesin e plotë.",
+            f"drejtorisë) që treguesi {related.code} nuk e jep. Pa AI, Sportel nuk përgatit "
+            "llogaritje të re — provo një pyetje shembull ose pyet për treguesin e plotë.",
             "en": "This question asks for a breakdown or filter (e.g. by month, unit or "
-            f"directorate) that indicator {related.code} does not provide. Without AI no new "
-            "query is built — try an example question or ask for the whole indicator.",
+            f"directorate) that indicator {related.code} does not provide. Without AI, Sportel "
+            "does not prepare a new calculation — try an example question or ask for the whole "
+            "indicator.",
         }
         interpreted = {
             "sq": f"Treguesi {related.code} · {related.name['sq']} + filtër ose ndarje",

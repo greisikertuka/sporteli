@@ -67,6 +67,9 @@ class AskAnswer(BaseModel):
     gap: AskGap | None
     blocked_reason: L10n | None
     llm: AskLLM
+    method: L10n | None = None
+    """How the number is calculated, in plain words (the passport's formula), or None.
+    Set when a passport answered; the Ask screen shows this instead of the SQL."""
 
 
 class AskExample(BaseModel):
