@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 
@@ -362,8 +363,13 @@ def _sql_answer(
     origin: str,
     llm: dict | None = None,
     interpreted: L10n | None = None,
+    repair: Callable[[str, str], tuple[str | None, dict]] | None = None,
 ) -> dict:
-    """Guard → gap check → sandbox → exploratory table. ``origin``: user | ai | prepared."""
+    """Guard → gap check → sandbox → exploratory table. ``origin``: user | ai | prepared.
+
+    ``repair(sql, error)`` (AI origin only) may return a corrected SELECT once after a
+    DuckDB error; the corrected query goes through the same guard and sandbox.
+    """
     llm = llm or _no_llm()
     verdict = check_sql(sql)
     if not verdict.allowed:
@@ -417,6 +423,20 @@ def _sql_answer(
         )
     except SandboxError as exc:
         log.info("sandbox error: %s", exc)
+        if repair is not None:
+            fixed_sql, fix_llm = repair(verdict.sql, str(exc))
+            merged = {
+                **llm,
+                "latency_ms": (llm.get("latency_ms") or 0) + (fix_llm.get("latency_ms") or 0),
+                "cost_usd": round(
+                    (llm.get("cost_usd") or 0.0) + (fix_llm.get("cost_usd") or 0.0), 6
+                ),
+            }
+            if fixed_sql:
+                return _sql_answer(
+                    con, question, fixed_sql, origin=origin, llm=merged, interpreted=interpreted
+                )
+            llm = merged
         return _base(
             question,
             interpreted_as=interpreted,
@@ -451,9 +471,11 @@ def _sql_answer(
             else {"sq": "", "en": ""}
         )
         rows_sq, rows_en = format_number(n, 0, "sq"), format_number(n, 0, "en")
+        word_sq, word_en = ("rresht", "row") if n == 1 else ("rreshta", "rows")
         answer = {
-            "sq": f"Rezultati i pyetjes eksploruese: {rows_sq} rreshta{more['sq']}." + caveat["sq"],
-            "en": f"Exploratory result: {rows_en} rows{more['en']}." + caveat["en"],
+            "sq": f"Rezultati i pyetjes eksploruese: {rows_sq} {word_sq}{more['sq']}."
+            + caveat["sq"],
+            "en": f"Exploratory result: {rows_en} {word_en}{more['en']}." + caveat["en"],
         }
     return _base(
         question,
@@ -551,8 +573,20 @@ def _llm_route(
     if it.kind == "passport" and it.passport_code:
         return _passport_answer(con, question, get_passport(it.passport_code), llm=info)
     if it.kind == "sql" and it.sql:
+
+        def _repair(bad_sql: str, error: str) -> tuple[str | None, dict]:
+            fixed = intent_mod.repair(question, bad_sql, error, llm)
+            ok = fixed.intent is not None and fixed.intent.kind == "sql" and fixed.intent.sql
+            return (fixed.intent.sql if ok else None), fixed.llm
+
         return _sql_answer(
-            con, question, it.sql, origin="ai", llm=info, interpreted=it.interpreted_as
+            con,
+            question,
+            it.sql,
+            origin="ai",
+            llm=info,
+            interpreted=it.interpreted_as,
+            repair=None if info.get("cached") else _repair,
         )
     if it.refuse_reason == "personal_data":
         return _blocked(question, "personal", llm=info)

@@ -49,8 +49,10 @@ Until an item is approved, it is labelled "pending approval" on screen or kept o
 | Claude Code | Anthropic | Implementation: design discussion, scaffolding, backend, frontend, tests and documentation. It includes **multi-agent workflows**: several Claude Code agents working in parallel on separate modules against the written build contract `docs/superpowers/specs/2026-09-26-gap-to-proof-build.md`. Large parts of the code, tests and documentation were written this way. The team set the scope, the contract and the acceptance checks |
 | Claude (chat and research) | Anthropic | Research assistance for the pitch and product strategy: public sources, jury analysis and demo plan (`docs/research/2026-09-26-track-d-wow-research.md`, which marks each fact as verified, reported or dropped) |
 | ChatGPT | OpenAI | Visual and UI design of the **pre-event** "civic interface" prototype (palette, layout, motion) and its front-end code (see section 5) |
-| Claude API: `claude-haiku-4-5` | Anthropic | **In the product, only when an API key is configured:** proposes column-to-field mappings during ingest (one structured call per file; it sees headers, inferred types and at most 5 masked sample values per non-personal column, never rows) |
-| Claude API: `claude-sonnet-5` | Anthropic | **In the product, only when an API key is configured:** turns a free-text question into a structured intent (a passport code or one SELECT, which code then checks). It does not write answer text or numbers |
+| OpenAI API: `gpt-5-mini` via the organisers' gateway (organisers' key) | OpenAI | **In the product, only when the key is configured and accepted:** proposes column-to-field mappings during ingest (one structured call per file; it sees headers, inferred types and at most 5 masked sample values per non-personal column, never rows) |
+| OpenAI API: `gpt-5-mini` via the organisers' gateway (organisers' key) | OpenAI | **In the product, only when the key is configured and accepted:** turns a free-text question into a structured intent (a passport code or one SELECT, which code then checks). It does not write answer text or numbers |
+| Claude API: `claude-haiku-4-5` (alternative provider, not used with the organisers' key) | Anthropic | **In the product, only when an API key is configured:** proposes column-to-field mappings during ingest (one structured call per file; it sees headers, inferred types and at most 5 masked sample values per non-personal column, never rows) |
+| Claude API: `claude-sonnet-5` (alternative provider, not used with the organisers' key) | Anthropic | **In the product, only when an API key is configured:** turns a free-text question into a structured intent (a passport code or one SELECT, which code then checks). It does not write answer text or numbers |
 
 - **No key configured.** Without a key, the product runs in RULES mode ("RREGULLA" in the
   header). Mapping uses synonyms and fuzzy matching, example questions go straight to their
@@ -62,14 +64,14 @@ Until an item is approved, it is labelled "pending approval" on screen or kept o
   narratives". That feature does not exist: the report is templated by code.
 - **Claude Desktop and the MCP SDK were not used.** The repository contains no MCP server.
 - **Spoken declaration in the pitch:** "Built with Claude Code, including multi-agent runs.
-  Claude Haiku proposes column mappings and Claude Sonnet reads free-text questions, only when a
-  key is set. ChatGPT designed our pre-event UI prototype. Claude helped with research. Code
+  In the product, OpenAI models from the organisers' key propose column mappings and read
+  free-text questions, only when the key is set. ChatGPT designed our pre-event UI prototype. Claude helped with research. Code
   computes every number."
 
 ## 4. Open-source libraries, frameworks and tooling used
 
 - **API (Python 3.12):** FastAPI, Uvicorn, DuckDB, Pydantic and pydantic-settings,
-  python-multipart, openpyxl, xlrd, sqlglot, PyYAML, PyArrow, RapidFuzz, Anthropic Python SDK.
+  python-multipart, openpyxl, xlrd, sqlglot, PyYAML, PyArrow, RapidFuzz, OpenAI and Anthropic Python SDKs.
   Development: pytest, HTTPX, Ruff, uv.
 - **Web:** Next.js 16, React 19, next-intl, next-themes, Apache ECharts and echarts-for-react,
   lucide-react, Radix UI (`radix-ui`), shadcn, class-variance-authority, cn, tw-animate-css,
@@ -130,7 +132,7 @@ CEST. *[Update this list and the commit range to match the CP3 sheet and the fin
   - detecting the header row, the units and the total rows;
   - the personal-data gate and column profiling;
   - recipes keyed by a header fingerprint, with format-drift detection;
-  - mapping by Claude Haiku 4.5, with a rules fallback;
+  - AI mapping (OpenAI gpt-5-mini with the organisers' key, or Claude Haiku 4.5), with a rules fallback;
   - a load that reconciles against the file's total row and returns a receipt.
 - **Indicator passports:** 13 versioned passports (formula, SQL, lineage SQL, owner, target,
   checks) with source-row lineage, a population-basis pin and five plausibility rules
@@ -140,7 +142,7 @@ CEST. *[Update this list and the commit range to match the CP3 sheet and the fin
 - **Honest copilot with four labels decided by code:**
   - verified, exploratory, blocked and not answerable;
   - example questions and a deterministic matcher;
-  - Claude Sonnet 5 intent reading;
+  - AI intent reading (OpenAI gpt-5-mini with the organisers' key, or Claude Sonnet 5), with one automatic retry when its SQL fails;
   - a sqlglot SQL guard and a sandbox;
   - templated answers, a 24-question golden set and an eval script.
 - **Reports and interoperability:**

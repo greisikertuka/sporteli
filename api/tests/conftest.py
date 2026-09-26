@@ -12,10 +12,18 @@ def _reset_singletons() -> None:
     get_settings.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def _no_real_llm_keys(monkeypatch):
+    """Tests never reach a real provider, even when api/.env holds a key (env beats .env)."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_PROVIDER", "auto")
+
+
 @pytest.fixture
 def settings_env(tmp_path, monkeypatch):
     monkeypatch.setenv("DUCKDB_PATH", str(tmp_path / "test.duckdb"))
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     _reset_singletons()
     yield
     _reset_singletons()

@@ -732,11 +732,11 @@ def _map_phase(state: PreviewState, con: Cursor, dataset: str | None) -> None:
             log.add(
                 "mapping",
                 "ok",
-                f"Claude Haiku propozoi hartëzimin ({n_ai} kolona) në "
+                f"{res.model or 'AI'} propozoi hartëzimin ({n_ai} kolona) në "
                 f"{_n((res.latency_ms or 0) / 1000, 'sq', 1)} s · ${_n(res.cost_usd, 'sq', 4)}. "
                 f"U dërguan vetëm {ai.sent['headers']} koka dhe ≤{ai.sent['samples_per_column']} "
                 "shembuj të maskuar për kolonë — 0 rreshta.",
-                f"Claude Haiku proposed the mapping ({n_ai} columns) in "
+                f"{res.model or 'AI'} proposed the mapping ({n_ai} columns) in "
                 f"{_n((res.latency_ms or 0) / 1000, 'en', 1)} s · ${_n(res.cost_usd, 'en', 4)}. "
                 f"Only {ai.sent['headers']} headers and ≤{ai.sent['samples_per_column']} masked "
                 "samples per column were sent — 0 rows.",

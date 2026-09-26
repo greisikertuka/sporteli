@@ -1,4 +1,8 @@
-"""Single entry point for Claude calls: model choice, spend tracking, call log, graceful failure.
+"""Single entry point for LLM calls: provider, model choice, spend tracking, call log, fallback.
+
+Two providers sit behind the same interface: Anthropic (Claude) and OpenAI (the organisers'
+hackathon key). Callers pass a *role* (``MODEL_FAST`` for column mapping, ``MODEL_SMART`` for
+reading questions); the client maps it to the provider's model.
 
 Callers never see exceptions from the LLM layer; they get an ``LLMResult`` with ``ok=False``
 and an error code, so the product keeps working (RULES mode) when AI is unavailable.
@@ -28,6 +32,7 @@ from typing import Any, Literal
 
 import anthropic
 import duckdb
+import openai
 
 from app.config import get_settings
 
@@ -40,6 +45,14 @@ MODEL_SMART = "claude-sonnet-5"  # copilot intent / SQL
 PRICING: dict[str, tuple[float, float]] = {
     MODEL_FAST: (1.0, 5.0),
     MODEL_SMART: (2.0, 10.0),
+    # OpenAI list prices (USD per 1M tokens), used to track spend against the team budget.
+    "gpt-5": (1.25, 10.0),
+    "gpt-5-mini": (0.25, 2.0),
+    "gpt-5-nano": (0.05, 0.4),
+    "gpt-4.1": (2.0, 8.0),
+    "gpt-4.1-mini": (0.4, 1.6),
+    "gpt-4o": (2.5, 10.0),
+    "gpt-4o-mini": (0.15, 0.6),
 }
 
 # Models that accept output_config.effort (Haiku 4.5 rejects it). Sonnet 5 runs adaptive
@@ -47,6 +60,12 @@ PRICING: dict[str, tuple[float, float]] = {
 _EFFORT_MODELS = {MODEL_SMART}
 
 Mode = Literal["live", "rules"]
+Provider = Literal["anthropic", "openai"]
+
+
+def _is_reasoning_model(model: str) -> bool:
+    """OpenAI reasoning models: max_completion_tokens also covers hidden reasoning tokens."""
+    return model.startswith(("gpt-5", "o1", "o3", "o4"))
 
 
 @dataclass(frozen=True)
@@ -104,8 +123,18 @@ def _usage(response: Any) -> _Usage:
     )
 
 
+def _price(model: str) -> tuple[float, float]:
+    if model in PRICING:
+        return PRICING[model]
+    # Dated snapshots such as "gpt-5-mini-2025-08-07": the longest known prefix wins.
+    for known in sorted(PRICING, key=len, reverse=True):
+        if model.startswith(known):
+            return PRICING[known]
+    return PRICING[MODEL_SMART]
+
+
 def cost_of(model: str, usage: _Usage) -> float:
-    in_price, out_price = PRICING.get(model, PRICING[MODEL_SMART])
+    in_price, out_price = _price(model)
     return (
         usage.input_tokens * in_price
         + usage.cache_write * in_price * 1.25
@@ -122,21 +151,58 @@ class LLMClient:
         budget_usd: float,
         sdk: Any | None = None,
         db: DbProvider | None = None,
+        provider: Provider = "anthropic",
+        models: dict[str, str] | None = None,
+        base_url: str | None = None,
     ):
         self._api_key = api_key
         self._budget_usd = budget_usd
+        self.provider: Provider = provider
+        self._models = dict(models or {})
         if sdk is None and api_key:
-            sdk = anthropic.Anthropic(api_key=api_key, timeout=45.0, max_retries=1)
+            if provider == "openai":
+                sdk = openai.OpenAI(
+                    api_key=api_key, base_url=base_url or None, timeout=45.0, max_retries=1
+                )
+            else:
+                sdk = anthropic.Anthropic(api_key=api_key, timeout=45.0, max_retries=1)
         self._sdk = sdk
         self._db = db
         self._lock = threading.Lock()
         self.spent_usd = 0.0
+        self.auth_failed = False
+        """Set when the provider rejects the key (401/403): the client drops to RULES mode."""
 
     # ---- state -------------------------------------------------------------------------
 
     @property
     def available(self) -> bool:
-        return self._sdk is not None
+        return self._sdk is not None and not self.auth_failed
+
+    def verify_key(self) -> bool:
+        """List models (free, no tokens). A rejected key sets ``auth_failed``; network errors
+        leave the mode unchanged. Returns True when the key is known to work."""
+        if self._sdk is None:
+            return False
+        try:
+            self._sdk.models.list()
+        except (
+            openai.AuthenticationError,
+            openai.PermissionDeniedError,
+            anthropic.AuthenticationError,
+            anthropic.PermissionDeniedError,
+        ):
+            log.warning("The %s API rejected the configured key: RULES mode", self.provider)
+            self.auth_failed = True
+            return False
+        except Exception:  # offline or transient: do not flip the mode
+            log.warning("Could not verify the %s key (network?)", self.provider)
+            return False
+        return True
+
+    def model_for(self, role: str) -> str:
+        """Provider model id for a role constant (MODEL_FAST / MODEL_SMART)."""
+        return self._models.get(role, role)
 
     @property
     def budget_usd(self) -> float:
@@ -248,17 +314,30 @@ class LLMClient:
         if system:
             kwargs["system"] = system
         summary = {**sent, "output": tool_name}
-        return self._call(kwargs, purpose=purpose, sent=summary, parse_json=True)
+        return self._call(
+            kwargs, purpose=purpose, sent=summary, parse_json=True, schema=schema, name=tool_name
+        )
 
     def _call(
-        self, kwargs: dict[str, Any], *, purpose: str, sent: dict, parse_json: bool
+        self,
+        kwargs: dict[str, Any],
+        *,
+        purpose: str,
+        sent: dict,
+        parse_json: bool,
+        schema: dict | None = None,
+        name: str | None = None,
     ) -> LLMResult:
-        model = kwargs["model"]
         if not self.available:
             return LLMResult(ok=False, error="llm_unavailable")
         if self.spent_usd >= self._budget_usd:
             return LLMResult(ok=False, error="llm_budget_exhausted")
+        if self.provider == "openai":
+            return self._call_openai(
+                kwargs, purpose=purpose, sent=sent, parse_json=parse_json, schema=schema, name=name
+            )
 
+        model = kwargs["model"]
         sent = {**sent, "rows_sent": 0}
         started = time.perf_counter()
         response = None
@@ -271,6 +350,8 @@ class LLMClient:
         except anthropic.APIStatusError as e:
             log.warning("LLM API error %s: %s", e.status_code, e.message)
             error = f"llm_error:{e.status_code}"
+            if e.status_code in (401, 403):
+                self.auth_failed = True
         except anthropic.APITimeoutError:
             log.warning("LLM timeout")
             error = "llm_error:timeout"
@@ -301,6 +382,138 @@ class LLMClient:
                     data = json.loads(text)
                 except (TypeError, ValueError):
                     error = "llm_invalid_json"
+
+        with self._lock:
+            self.spent_usd += cost
+        call_id = self._record(
+            purpose=purpose,
+            model=model,
+            usage=usage,
+            cost=cost,
+            latency_ms=latency_ms,
+            ok=error is None,
+            error=error,
+            sent=sent,
+        )
+        return LLMResult(
+            ok=error is None,
+            text=text if error is None else None,
+            data=data if error is None else None,
+            error=error,
+            model=model,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cost_usd=cost,
+            latency_ms=latency_ms,
+            stop_reason=stop_reason,
+            call_id=call_id,
+        )
+
+    def _call_openai(
+        self,
+        kwargs: dict[str, Any],
+        *,
+        purpose: str,
+        sent: dict,
+        parse_json: bool,
+        schema: dict | None,
+        name: str | None,
+    ) -> LLMResult:
+        """Same contract as the Anthropic path, via Chat Completions + structured outputs."""
+        model = self.model_for(kwargs["model"])
+        messages: list[dict[str, str]] = []
+        if kwargs.get("system"):
+            messages.append({"role": "system", "content": kwargs["system"]})
+        messages.extend(kwargs["messages"])
+        params: dict[str, Any] = {"model": model, "messages": messages}
+        max_tokens = int(kwargs.get("max_tokens", 1024))
+        if _is_reasoning_model(model):
+            params["max_completion_tokens"] = max(max_tokens, 4096)
+            # Column mapping is simple: minimal reasoning keeps it fast on stage. Reading a
+            # question into SQL keeps "low" for better queries.
+            params["reasoning_effort"] = "minimal" if kwargs["model"] == MODEL_FAST else "low"
+        else:
+            params["max_completion_tokens"] = max_tokens
+        if parse_json and schema is not None:
+            params["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": _schema_name(name or "structured_output"),
+                    "schema": schema,
+                    "strict": True,
+                },
+            }
+
+        sent = {**sent, "rows_sent": 0, "provider": "openai"}
+        started = time.perf_counter()
+        response = None
+        error: str | None = None
+        try:
+            try:
+                response = self._sdk.chat.completions.create(**params)
+            except openai.BadRequestError as e:
+                rf = params.get("response_format")
+                if params.get("reasoning_effort") == "minimal" and "reasoning" in str(e).lower():
+                    # This model does not accept "minimal": retry once with "low".
+                    log.warning("reasoning_effort=minimal rejected (%s); retrying with low", e)
+                    params["reasoning_effort"] = "low"
+                elif rf is not None and rf["json_schema"].get("strict"):
+                    # A schema outside the strict subset: retry once without constrained decoding.
+                    log.warning("OpenAI rejected the strict schema (%s); retrying non-strict", e)
+                    rf["json_schema"]["strict"] = False
+                else:
+                    raise
+                response = self._sdk.chat.completions.create(**params)
+        except openai.RateLimitError:
+            log.warning("LLM rate limited")
+            error = "llm_error:rate_limited"
+        except openai.APIStatusError as e:
+            log.warning("LLM API error %s: %s", e.status_code, e.message)
+            error = f"llm_error:{e.status_code}"
+            if e.status_code in (401, 403):
+                self.auth_failed = True
+        except openai.APITimeoutError:
+            log.warning("LLM timeout")
+            error = "llm_error:timeout"
+        except openai.APIConnectionError:
+            log.warning("LLM connection error")
+            error = "llm_error:connection"
+        except Exception:  # contract: the LLM layer never crashes the app
+            log.exception("Unexpected LLM failure")
+            error = "llm_error:unexpected"
+        latency_ms = int((time.perf_counter() - started) * 1000)
+
+        usage = _Usage()
+        text: str | None = None
+        data: Any = None
+        stop_reason: str | None = None
+        if response is not None:
+            u = getattr(response, "usage", None)
+            if u is not None:
+                prompt_tokens = int(getattr(u, "prompt_tokens", 0) or 0)
+                details = getattr(u, "prompt_tokens_details", None)
+                cached = int(getattr(details, "cached_tokens", 0) or 0) if details else 0
+                usage = _Usage(
+                    input_tokens=max(prompt_tokens - cached, 0),
+                    output_tokens=int(getattr(u, "completion_tokens", 0) or 0),
+                    cache_read=cached,
+                )
+            choices = getattr(response, "choices", None) or []
+            choice = choices[0] if choices else None
+            message = getattr(choice, "message", None)
+            finish = getattr(choice, "finish_reason", None)
+            stop_reason = {"stop": "end_turn", "length": "max_tokens"}.get(finish, finish)
+            text = getattr(message, "content", None) or ""
+            if getattr(message, "refusal", None) or finish == "content_filter":
+                error = "llm_refusal"
+            elif finish == "length":
+                error = "llm_max_tokens"
+            elif parse_json:
+                try:
+                    data = json.loads(text)
+                except (TypeError, ValueError):
+                    error = "llm_invalid_json"
+        cost = cost_of(model, usage) if response is not None else 0.0
 
         with self._lock:
             self.spent_usd += cost
@@ -371,6 +584,32 @@ class LLMClient:
         return call_id
 
 
+def _schema_name(name: str) -> str:
+    """OpenAI schema names allow [a-zA-Z0-9_-], at most 64 characters."""
+    clean = "".join(c if c.isalnum() or c in "_-" else "_" for c in name)
+    return clean[:64] or "structured_output"
+
+
+def build_client(settings: Any, db: DbProvider | None = None) -> LLMClient:
+    """Pick the provider: ``auto`` prefers the OpenAI key, then the Anthropic key."""
+    provider = (settings.llm_provider or "auto").strip().lower()
+    if provider == "auto":
+        provider = "openai" if settings.openai_api_key else "anthropic"
+    if provider == "openai":
+        return LLMClient(
+            api_key=settings.openai_api_key,
+            budget_usd=settings.llm_budget_usd,
+            db=db,
+            provider="openai",
+            models={
+                MODEL_FAST: settings.openai_model_fast,
+                MODEL_SMART: settings.openai_model_smart,
+            },
+            base_url=settings.openai_base_url,
+        )
+    return LLMClient(api_key=settings.anthropic_api_key, budget_usd=settings.llm_budget_usd, db=db)
+
+
 _client: LLMClient | None = None
 _client_lock = threading.Lock()
 
@@ -382,9 +621,11 @@ def get_llm() -> LLMClient:
         if _client is None:
             from app.warehouse.db import get_db
 
-            s = get_settings()
-            client = LLMClient(api_key=s.anthropic_api_key, budget_usd=s.llm_budget_usd, db=get_db)
+            client = build_client(get_settings(), db=get_db)
             client.restore_spend()
+            if client.available:
+                # Free key check in the background, so a rejected key shows RULES, not AI LIVE.
+                threading.Thread(target=client.verify_key, daemon=True).start()
             _client = client
         return _client
 

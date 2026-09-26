@@ -84,14 +84,14 @@ keyboard navigation and reduced motion.
 ```
 department exports (CSV / XLSX / XLS)
   │  /ingest: read → header & units → set aside title/blank/total rows → personal-data gate
-  │           → profile → recipe lookup (header fingerprint) → mapping (Haiku 4.5, or rules)
+  │           → profile → recipe lookup (header fingerprint) → mapping (AI model, or rules)
   │           → person confirms → load with source_id + row_no → reconcile → Load Receipt
   ▼
 DuckDB (one file): canonical tables + source receipts, mapping recipes, llm_call log, pins
   ├─ indicator passports (versioned YAML: formula, SQL, lineage SQL, owner, checks, target)
   │     → board, passport, signals, .xlsx with "Burimi", open-data CSV
   ├─ SMP 2024 Annex A coverage pack (states and owners only, nothing computed)
-  └─ copilot /ask: example → passport │ free text → matcher, or Sonnet 5 intent (AI LIVE only)
+  └─ copilot /ask: example → passport │ free text → matcher, or AI intent (AI LIVE only)
         → passport SQL (verified) or one guarded SELECT in a sandbox (exploratory);
           the label and the answer text come from code
   ▼
@@ -114,7 +114,7 @@ REST API /api/v1 (FastAPI, OpenAPI at /docs) → Next.js 16 web app (sq/en)
 | `web/messages/{sq,en}.json` | UI strings |
 | `web/scripts/` | `check-live.mjs` (end-to-end contract check), `record-replay.mjs` (re-records REPLAY) |
 
-Stack: Python 3.12, FastAPI, DuckDB, openpyxl, sqlglot, RapidFuzz, Anthropic SDK; Next.js 16,
+Stack: Python 3.12, FastAPI, DuckDB, openpyxl, sqlglot, RapidFuzz, OpenAI and Anthropic SDKs; Next.js 16,
 React 19, Tailwind CSS 4, next-intl, Apache ECharts, lucide-react.
 
 ## Run it
@@ -125,7 +125,9 @@ Prerequisites: Python 3.12 with [uv](https://docs.astral.sh/uv/), Node 22 with p
 ```bash
 cp .env.example .env          # docker compose reads this
 cp .env.example api/.env      # the API reads this when run from api/
-# For live AI, put ANTHROPIC_API_KEY=... in both files. Without a key everything runs in RULES mode.
+# For live AI, put OPENAI_API_KEY=... (the organisers' key) and
+# OPENAI_BASE_URL=https://llm.mjovanovic.dev/v1 in both files, then check it with
+# `cd api && uv run python scripts/check_llm.py`. Without a key everything runs in RULES mode.
 
 make install                  # uv sync + pnpm install
 make seed                     # fresh demo database: requests, budget, population (6/13)
@@ -167,7 +169,11 @@ NEXT_PUBLIC_USE_FIXTURES=1 pnpm --dir web dev                           # forced
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | empty | Empty = RULES mode. Set = AI LIVE (until the budget is spent) |
+| `LLM_PROVIDER` | `auto` | `auto` uses OpenAI when `OPENAI_API_KEY` is set, otherwise Anthropic |
+| `OPENAI_API_KEY` | empty | The organisers' key. Empty (and no Anthropic key) = RULES mode. A rejected key also falls back to RULES |
+| `OPENAI_BASE_URL` | empty | The organisers' gateway: `https://llm.mjovanovic.dev/v1` (`AI_BASE_URL` also works) |
+| `OPENAI_MODEL_FAST` / `OPENAI_MODEL_SMART` | `gpt-5-mini` / `gpt-5-mini` | Models for column mapping / reading questions |
+| `ANTHROPIC_API_KEY` | empty | Alternative provider (Claude Haiku 4.5 / Sonnet 5) |
 | `LLM_BUDGET_USD` | `20` | Spend cap; at the cap the API switches to RULES mode |
 | `DUCKDB_PATH` | `data/pulse.duckdb` | Database file, relative to `api/` |
 | `CORS_ORIGINS` | `http://localhost:3000`, `http://localhost:3100` | JSON list or comma-separated origins |
@@ -211,12 +217,12 @@ curl -s -X POST http://localhost:8000/api/v1/ask -H "Content-Type: application/j
 
 ## AI and privacy
 
-**What AI does** (only when `ANTHROPIC_API_KEY` is set and the budget is not spent):
+**What AI does** (only when an API key is set, accepted by the provider, and the budget is not spent):
 
-- **Column mapping (Claude Haiku 4.5).** One structured-output call per file proposes a field
+- **Column mapping (OpenAI `gpt-5-mini`, or Claude Haiku 4.5).** One structured-output call per file proposes a field
   for each column, with a confidence, a reason and at most one clarifying question. Mappings
   below 0.8 confidence need a click.
-- **Reading free-text questions (Claude Sonnet 5).** One structured call turns the question into
+- **Reading free-text questions (OpenAI `gpt-5-mini`, or Claude Sonnet 5).** One structured call turns the question into
   an intent: a passport code, or a single SELECT. The model never writes the answer. Example
   chips skip the model entirely.
 
@@ -264,7 +270,7 @@ code. If a model-written "interpreted as" text contains a digit, code replaces i
 - The accuracy figure comes from our own frozen set of 24 questions (12 Albanian, 12 English,
   including traps). It is indicative, not a benchmark. `GET /ask/eval` returns the latest run and
   its mode.
-- The LLM client calls Claude through the Anthropic API only. There is no local-model option
+- The LLM client calls OpenAI (the organisers' key) or Anthropic. There is no local-model option
   today.
 - In AI LIVE mode the text of a free-text question goes to the model. Do not type personal data
   into questions.

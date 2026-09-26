@@ -693,3 +693,28 @@ def test_get_llm_calls(client, monkeypatch):
     call = body["calls"][0]
     assert call["purpose"] == "copilot_intent" and call["ok"] is True
     assert call["sent"]["rows_sent"] == 0
+
+
+def test_ai_sql_error_is_repaired_once(start):
+    bad = "SELECT department, count(*) AS n FROM request WHERE no_such_column > 1 GROUP BY 1"
+    good = "SELECT department, count(*) AS n FROM request GROUP BY 1 ORDER BY 2 DESC, 1"
+    llm, messages = live(start, intent("sql", sql=bad), intent("sql", sql=good))
+    q = "Which directorate has the most requests?"
+    a = ask(start, q, "en", llm=llm)
+    assert a["label"] == "exploratory" and a["table"]["columns"] == ["department", "n"]
+    assert len(messages.calls) == 2
+    repair_prompt = messages.calls[1]["messages"][0]["content"]
+    assert "no_such_column" in repair_prompt and "<error>" in repair_prompt
+    assert a["llm"]["cost_usd"] == pytest.approx(2 * (2000 * 2.0 + 100 * 10.0) / 1e6)
+    # The repaired intent is what the cache serves next time.
+    again = ask(start, q, "en", llm=llm)
+    assert again["llm"]["cached"] is True and again["label"] == "exploratory"
+    assert len(messages.calls) == 2
+
+
+def test_ai_sql_error_after_failed_repair_gives_no_number(start):
+    bad = "SELECT department FROM request WHERE no_such_column > 1"
+    llm, messages = live(start, intent("sql", sql=bad), intent("sql", sql=bad))
+    a = ask(start, "Which directorate has the most requests?", "en", llm=llm)
+    assert a["label"] == "not_answerable" and a["value"] is None
+    assert len(messages.calls) == 2  # exactly one repair attempt, no loop

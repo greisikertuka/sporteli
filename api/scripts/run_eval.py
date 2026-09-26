@@ -1,6 +1,6 @@
 """Run the copilot's 24-question golden set end to end and write ``api/eval_result.json``.
 
-    cd api && uv run python scripts/run_eval.py            # mode follows ANTHROPIC_API_KEY
+    cd api && uv run python scripts/run_eval.py            # live when an API key is configured
     cd api && uv run python scripts/run_eval.py --mode rules
 
 Steps:
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         "--mode",
         choices=("auto", "rules"),
         default="auto",
-        help="rules: ignore any ANTHROPIC_API_KEY (default: live when a key is configured)",
+        help="rules: ignore any API key (default: live when a key is configured)",
     )
     ap.add_argument("--strict", action="store_true", help="exit 1 unless every question matches")
     args = ap.parse_args(argv)
@@ -87,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     os.environ["DUCKDB_PATH"] = args.db or str(Path(tmp.name) / "eval.duckdb")
     if args.mode == "rules":
         os.environ["ANTHROPIC_API_KEY"] = ""
+        os.environ["OPENAI_API_KEY"] = ""
 
     from app.config import get_settings
 

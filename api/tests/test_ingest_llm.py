@@ -102,7 +102,7 @@ def test_ai_mapping_is_used_and_checked_by_code(db):
     assert p["question"]["column"] == "Data e mbylljes"
     assert [o["field"] for o in p["question"]["options"]] == ["closed_at", None]
     step = next(s for s in p["steps"] if s["code"] == "mapping")
-    assert step["status"] == "ok" and "Claude Haiku" in step["message"]["en"]
+    assert step["status"] == "ok" and MODEL_FAST in step["message"]["en"]
 
 
 def test_personal_data_is_never_sent_to_the_model(db):

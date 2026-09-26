@@ -3,7 +3,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 API_DIR = Path(__file__).resolve().parents[1]
@@ -16,10 +16,26 @@ def _resolve(path: str) -> Path:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", str(API_DIR / ".env")), extra="ignore", populate_by_name=True
+    )
 
     app_version: str = "0.1.0"
+    # "auto" picks OpenAI when OPENAI_API_KEY is set, else Anthropic when ANTHROPIC_API_KEY is set.
+    llm_provider: str = "auto"
     anthropic_api_key: str | None = None
+    # The organisers' starter pack names these AI_API_KEY / AI_BASE_URL; both spellings work.
+    openai_api_key: str | None = Field(
+        default=None, validation_alias=AliasChoices("OPENAI_API_KEY", "AI_API_KEY")
+    )
+    openai_base_url: str | None = Field(
+        default=None, validation_alias=AliasChoices("OPENAI_BASE_URL", "AI_BASE_URL")
+    )
+    """The organisers' gateway (https://llm.mjovanovic.dev/v1); empty means api.openai.com."""
+    openai_model_fast: str = "gpt-5-mini"
+    """Column mapping (the role Claude Haiku plays with the Anthropic provider)."""
+    openai_model_smart: str = "gpt-5-mini"
+    """Reading free-text questions (the role Claude Sonnet plays with the Anthropic provider)."""
     duckdb_path: str = "data/pulse.duckdb"
     cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
