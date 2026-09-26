@@ -3,7 +3,7 @@
 Contract: `docs/superpowers/specs/2026-09-26-gap-to-proof-build.md`. Strategy: `docs/research/2026-09-26-track-d-wow-research.md`.
 Branch: `feat/gap-to-proof` (from `codex/civic-interface`). Commit after every phase with the co-author trailer.
 
-**Status:** IN PROGRESS · heartbeat: 2026-09-26 07:20 CEST
+**Status:** IN PROGRESS · heartbeat: 2026-09-26 07:39 CEST
 
 If you are a session resuming this work: read the contract, check which boxes below are ticked, verify with `git log` and the test commands in contract §9, then continue with the first unticked item. Tick boxes and update the heartbeat as you go. If the heartbeat is less than 45 minutes old, another session is still working: do not start parallel edits.
 
@@ -25,8 +25,8 @@ If you are a session resuming this work: read the contract, check which boxes be
 - [x] Fixes applied, checks green, commit
 
 ## Phase 5 — docs and pitch
-- [ ] README, Annex E update, demo script (`docs/pitch/demo-script.md`), CP2 checklist
-- [ ] 8-slide deck draft (`docs/pitch/sportel-deck-v2.html`)
+- [x] README, Annex E update, demo script (`docs/pitch/demo-script.md`), CP2 checklist
+- [x] 8-slide deck draft (`docs/pitch/sportel-deck-v2.html`)
 - [ ] Browser verification with screenshots (desktop + mobile, light + dark)
 - [ ] Final commit; status set to DONE
 
@@ -36,3 +36,4 @@ If you are a session resuming this work: read the contract, check which boxes be
 - 2026-09-26 05:49: commit "feat: complete Sportel backend endpoints and frontend screens (gap-to-proof)"; golden test, ruff, error shape, ambiguity margin, Docker/seed/Makefile; frontend REPLAY recording, screen polish, i18n parity, 20 web tests.
 - 2026-09-26 06:19 — Phase 3 commit: loop verified end to end against the live API (check-live 21 shapes/0 issues, 432 pytest, 20/20 web tests, build ok); YTD periods, ask-again link, REPLAY snapshots re-recorded incl. after-zarfi-2 state.
 - 2026-09-26 07:20 — Phase 4 commit "fix: review findings (security, UX, demo flow, honesty)": supersede keys, reconciliation tolerance, atomic demo reset, JSON 500 handler, sandbox size caps, PII masking, ask scroll/focus, series_kind labels, REPLAY visibility, plus minor fixes; REPLAY snapshot re-recorded; new tests.
+- 2026-09-26 07:39 — Phase 5 docs commit: README, Annex E update, demo script, CP2 checklist, 8-slide deck draft (docker compose untested; envelopes 1/3 and REPLAY not browser-walked; team placeholders remain)
