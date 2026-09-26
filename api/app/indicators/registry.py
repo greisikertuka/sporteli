@@ -99,11 +99,28 @@ class Passport(BaseModel):
     lineage_sql: str
     breakdown_sql: str | None = None
     decimals: int | None = None
+    period_kind: Literal["ytd", "point"] = "ytd"
+    """``ytd``: the value covers 1 January to the end of the latest month; ``point``: a stock
+    at the end of the latest month (e.g. open overdue requests, headcount)."""
 
     @property
     def uses_basis(self) -> bool:
         """True for per-capita passports (their SQL takes the ``$basis`` parameter)."""
         return "$basis" in self.value_sql
+
+    def reported_period(self, period: str | None) -> str | None:
+        """The period as reported to people and clients.
+
+        Year-to-date values report an ISO 8601 month range (``"2026-01/2026-08"``) so a
+        headline value is never read as a single month; stocks report the month itself.
+        Internally (previous values, signals, answer templates) the latest month is used.
+        """
+        if not period or self.period_kind != "ytd" or "/" in period:
+            return period
+        year, _, month = period.partition("-")
+        if not month or month[:2] == "01":
+            return period
+        return f"{year}-01/{period}"
 
     @property
     def label(self) -> L10n:
@@ -439,9 +456,16 @@ def format_value(
 
 
 def format_period(period: str | None, locale: str = "sq") -> str:
-    """ "2026-08" → "gusht 2026" / "August 2026"."""
+    """ "2026-08" → "gusht 2026" / "August 2026"; "2026-01/2026-08" → "janar – gusht 2026"."""
     if not period:
         return "—"
+    if "/" in period:
+        start, _, end = period.partition("/")
+        a, b = format_period(start, locale), format_period(end, locale)
+        a_month, _, a_year = a.rpartition(" ")
+        if a_month and a_year == b.rpartition(" ")[2]:
+            return f"{a_month} – {b}"
+        return f"{a} – {b}"
     try:
         year, month = (int(x) for x in period.split("-")[:2])
     except ValueError:

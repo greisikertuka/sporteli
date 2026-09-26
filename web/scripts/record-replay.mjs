@@ -5,8 +5,10 @@
  * REPLAY (offline mode, always badged in the header) must never show a number that code
  * did not compute. This script drives a live API through the demo states and records its
  * real responses into `src/lib/fixtures/snapshot.ts`:
- *   reset → start state (6/13) → envelopes 1–3 committed with recipes → full state (13/13)
- *   → civil-registry basis for the per-capita passports → reset.
+ *   reset → start state (6/13) → envelope 2 alone (the gap-to-proof beat, 8/13) → envelopes
+ *   1 and 3 with recipes → full state (13/13) → civil-registry basis for the per-capita
+ *   passports → reset. The after-envelope-2 state is kept whole so the web tests can prove
+ *   that REPLAY composes intermediate states exactly as the API computes them.
  *
  * Usage (API running, e.g. `make api`):
  *   pnpm --dir web record-replay                 # http://localhost:8000
@@ -85,6 +87,7 @@ async function main() {
     console.log("  /ask/eval: not run yet (REPLAY answers 404 too)");
   }
   const llmCalls = await get("/llm/calls");
+  const pinStart = await get("/definitions/population_basis");
   const boardStart = await get("/indicators?pack=core_kpi");
   const codes = boardStart.indicators.map((i) => i.code);
   const passportsStart = await passports(codes);
@@ -105,13 +108,30 @@ async function main() {
   const fresh = {};
   for (const s of samples) fresh[s.name] = preview(await post(`/samples/${encodeURIComponent(s.name)}/preview`));
 
-  // ---------------------------------------------------------------- envelopes 1–3 with recipes
-  const envelopes = samples.filter((s) => s.envelope != null).sort((a, b) => a.envelope - b.envelope);
+  // ---------------------------------------------------------------- envelope 2 alone, then 1 and 3
+  // Envelope 2 goes first: the state after it (8/13) is the demo's gap-to-proof beat.
+  const envelopes = samples
+    .filter((s) => s.envelope != null)
+    .sort((a, b) => (a.envelope === 2 ? -1 : b.envelope === 2 ? 1 : a.envelope - b.envelope));
   const receipts = {};
+  let mid = null;
   for (const s of envelopes) {
     const p = await post(`/samples/${encodeURIComponent(s.name)}/preview`);
     receipts[s.name] = only(await post("/ingest/commit", commitBody(p, true)), RECEIPT_KEYS);
     console.log(`  committed ${s.name}: ${receipts[s.name].rows_loaded} rows`);
+    if (mid === null) {
+      const midBoard = await get("/indicators?pack=core_kpi");
+      const unlocked = receipts[s.name].indicators_unlocked.map((i) => i.code);
+      const midExamples = {};
+      for (const ex of examples) midExamples[ex.id] = await ask(ex.question.sq, ex.id);
+      mid = {
+        after: s.name,
+        board: midBoard,
+        passports: await passports(unlocked),
+        coverage: changedItems(coverageStart, await get("/coverage?pack=al_smp")),
+        examples: midExamples,
+      };
+    }
   }
   const recipeHit = {};
   for (const s of envelopes) recipeHit[s.name] = preview(await post(`/samples/${encodeURIComponent(s.name)}/preview`));
@@ -120,6 +140,7 @@ async function main() {
 
   // ---------------------------------------------------------------- full state (census basis)
   const boardFull = await get("/indicators?pack=core_kpi");
+  const pinFull = await get("/definitions/population_basis");
   const passportsFull = await passports(codes);
   const lineage = {};
   for (const code of codes) lineage[code] = await get(`/indicators/${encodeURIComponent(code)}/lineage?limit=${LINEAGE_ROWS}`);
@@ -132,7 +153,7 @@ async function main() {
 
   // ---------------------------------------------------------------- civil-registry basis
   const basisCodes = codes.filter((c) => passportsFull[c].basis != null);
-  await post("/definitions/population_basis", { value: "civil_registry", reason: "REPLAY recording" });
+  const pinCivil = await post("/definitions/population_basis", { value: "civil_registry", reason: "REPLAY recording" });
   const passportsCivil = await passports(basisCodes);
   const coverageCivil = await get("/coverage?pack=al_smp");
   const askCivil = {};
@@ -161,6 +182,8 @@ async function main() {
     eval: evaluation,
     llm_calls: llmCalls,
     board: { start: only(boardStart, ["pack", "as_of", "basis"]), full: only(boardFull, ["pack", "as_of", "basis"]) },
+    mid,
+    basis_pin: { start: pinStart, census_2023: pinFull, civil_registry: pinCivil },
     passports: { start: passportsStart, full: passportsFull, civil_registry: passportsCivil },
     lineage,
     coverage: {

@@ -249,6 +249,65 @@ test("gap-to-proof loop: not answerable → ingest zarfi-2 → receipt reconcile
   assert.deepEqual(reused.indicators_unlocked, []);
 });
 
+test("REPLAY after zarfi-2 alone matches the API's recorded state, indicator by indicator", async () => {
+  assert.ok(SNAPSHOT.mid, "the recording keeps the after-envelope-2 state");
+  assert.equal(SNAPSHOT.mid.after, ZARFI_2);
+  replay.__resetReplayForTests();
+  await load(ZARFI_2);
+
+  const shape = (i) => ({
+    code: i.code,
+    state: i.state,
+    value: i.value,
+    period: i.period,
+    previous: i.previous,
+    status: i.status,
+    basis: i.basis,
+    signals: i.signals,
+    sparkline: i.sparkline,
+    missing: i.missing,
+    files: i.sources.map((s) => s.filename),
+  });
+  const board = await replay.getBoard();
+  assert.deepEqual(board.indicators.map(shape), SNAPSHOT.mid.board.indicators.map(shape));
+  assert.deepEqual(board.coverage, SNAPSHOT.mid.board.coverage);
+  assert.equal(board.as_of, SNAPSHOT.mid.board.as_of);
+
+  const detail = (p) => ({
+    ...shape(p),
+    sql: p.sql,
+    series: p.series,
+    checks: p.checks,
+    lineage: p.lineage.map((l) => [l.filename, l.row_count, l.row_ranges]),
+  });
+  assert.deepEqual(Object.keys(SNAPSHOT.mid.passports).sort(), ["REV-01", "REV-02"]);
+  for (const [code, recorded] of Object.entries(SNAPSHOT.mid.passports)) {
+    assert.deepEqual(detail(await replay.getPassport(code)), detail(recorded), code);
+  }
+
+  const coverage = await replay.getCoverage();
+  for (const item of SNAPSHOT.mid.coverage) {
+    assert.deepEqual(coverage.items.find((i) => i.number === item.number), item, `SMP #${item.number}`);
+  }
+
+  for (const ex of SNAPSHOT.examples) {
+    const got = await replay.ask({ question: ex.question.sq, locale: "sq", example_id: ex.id });
+    const want = SNAPSHOT.mid.examples[ex.id];
+    const key = (a) => [a.label, a.value, a.passport_code, a.answer, a.gap?.dataset ?? null];
+    assert.deepEqual(key(got), key(want), ex.id);
+  }
+});
+
+test("year-to-date values carry a month range; stocks carry the month", () => {
+  const full = SNAPSHOT.passports.full;
+  assert.match(full["REV-02"].period, /^\d{4}-01\/\d{4}-\d{2}$/);
+  assert.match(full["REQ-03"].period, /^\d{4}-\d{2}$/);
+  assert.match(full["HR-01"].period, /^\d{4}-\d{2}$/);
+  assert.equal(formatPeriod(full["REV-02"].period, "sq", "short"), "jan – gush 2026");
+  assert.equal(formatPeriod(full["REV-02"].period, "en"), "January – August 2026");
+  assert.equal(full["REV-02"].sparkline.at(-1).period, full["REV-02"].period.split("/")[1]);
+});
+
 test("requests file drops 2 personal columns before profiling", async () => {
   replay.__resetReplayForTests();
   const preview = await replay.previewSample(REQUESTS);
@@ -341,7 +400,13 @@ test("population basis switches per-capita values to the recorded civil-registry
   const census = (await replay.getBoard()).indicators.find((i) => i.code === "HR-01");
   assert.equal(census.value, SNAPSHOT.passports.full["HR-01"].value);
   assert.equal(census.basis, "census_2023");
-  await replay.setPopulationBasis("civil_registry");
+  const pin = await replay.setPopulationBasis("civil_registry", "test");
+  assert.equal(pin.ok, true);
+  assert.equal(pin.value, "civil_registry");
+  assert.equal(pin.reason, "test");
+  assert.deepEqual(pin.options, SNAPSHOT.basis_pin.civil_registry.options);
+  assert.equal(pin.indicators.find((i) => i.code === "HR-01").value, SNAPSHOT.passports.civil_registry["HR-01"].value);
+  assert.equal(pin.indicators.find((i) => i.code === "WST-02").value, null); // waste not loaded
   const registry = (await replay.getBoard()).indicators.find((i) => i.code === "HR-01");
   assert.equal(registry.value, SNAPSHOT.passports.civil_registry["HR-01"].value);
   assert.equal(registry.basis, "civil_registry");

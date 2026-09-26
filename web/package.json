@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "record-replay": "node scripts/record-replay.mjs"
+    "record-replay": "node scripts/record-replay.mjs",
+    "check-live": "node scripts/check-live.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

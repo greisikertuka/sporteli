@@ -246,7 +246,8 @@ def test_board_values_previous_and_sources(full):
     ind = by_code(b)
 
     req1 = ind["REQ-01"]
-    assert req1["value"] == 24 and req1["period"] == "2026-06"
+    # year-to-date values report their period as an ISO month range; stocks the month
+    assert req1["value"] == 24 and req1["period"] == "2026-01/2026-06"
     assert req1["previous"] == 20  # year to date as of the end of May, comparable with value
     assert req1["status"] == "no_target"
     assert req1["sparkline"] == [{"period": f"2026-0{m}", "value": 4.0} for m in MONTHS]
@@ -256,6 +257,7 @@ def test_board_values_previous_and_sources(full):
     assert ind["REQ-02"]["value"] == pytest.approx(200 / 3)
     assert ind["REQ-02"]["previous"] == pytest.approx(200 / 3)
     assert ind["REQ-03"]["value"] == 5 and ind["REQ-03"]["previous"] == 4
+    assert ind["REQ-03"]["period"] == "2026-06"
     assert ind["REQ-04"]["value"] == pytest.approx(25 / 3)
     assert ind["REQ-04"]["status"] == "on_track"
 

@@ -28,6 +28,7 @@ import {
   type LoadReceipt,
   type Passport,
   type PopulationBasis,
+  type PopulationBasisPin,
   type ResetResult,
   type SampleFile,
   type SourceInfo,
@@ -258,12 +259,28 @@ export async function getCoverage(pack = "al_smp"): Promise<Coverage> {
   return clone(buildCoverage((code) => isComputable(code, s), s.basis));
 }
 
-export async function setPopulationBasis(value: PopulationBasis): Promise<{ ok: true; basis: PopulationBasis }> {
+/** The recorded pin for the chosen basis, with values only for passports computable now. */
+function basisPin(s: ReplayState, reason: string | null, pinnedAt: string | null): PopulationBasisPin {
+  const recorded = SNAPSHOT.basis_pin[s.basis];
+  return {
+    ...clone(recorded),
+    reason,
+    pinned_at: pinnedAt,
+    indicators: recorded.indicators.map((i) => (isComputable(i.code, s) ? i : { ...i, value: null, period: null })),
+  };
+}
+
+export async function getPopulationBasis(): Promise<PopulationBasisPin> {
+  await delay(80);
+  return clone(basisPin(load(), null, null));
+}
+
+export async function setPopulationBasis(value: PopulationBasis, reason?: string): Promise<PopulationBasisPin> {
   await delay(150);
   const s = load();
   s.basis = value;
   save();
-  return { ok: true, basis: value };
+  return clone(basisPin(s, reason ?? null, new Date().toISOString()));
 }
 
 // ---------------------------------------------------------------- endpoints: ingest

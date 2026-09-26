@@ -9,7 +9,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function IngestPage({ searchParams }: PageProps<"/ingest">) {
-  const { dataset } = await searchParams;
+  const { dataset, ask } = await searchParams;
   const wanted = typeof dataset === "string" && /^[a-z_]{1,40}$/.test(dataset) ? dataset : null;
-  return <IngestScreen wanted={wanted} />;
+  const askCode = typeof ask === "string" && /^[A-Z]{2,4}-\d{2}$/.test(ask) ? ask : null;
+  return <IngestScreen wanted={wanted} askCode={askCode} />;
 }

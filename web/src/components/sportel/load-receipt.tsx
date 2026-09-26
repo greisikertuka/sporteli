@@ -40,14 +40,24 @@ function Line({ label, value, strong = false, indent = 0 }: { label: string; val
 
 const isMoney = (field: string) => field.endsWith("_lek");
 
+/** "Ask again": the question that led here if this load unlocked it, else the first unlocked passport. */
+function askAgainHref(r: Receipt, askCode: string | null): string {
+  const unlocked = r.indicators_unlocked.map((i) => i.code);
+  const code = askCode && unlocked.includes(askCode) ? askCode : unlocked[0];
+  return code ? `/ask?passport=${encodeURIComponent(code)}` : "/ask";
+}
+
 export function LoadReceipt({
   receipt: r,
   compact = false,
   animate = false,
+  askCode = null,
 }: {
   receipt: Receipt;
   compact?: boolean;
   animate?: boolean;
+  /** The passport whose gap led here (`/ingest?ask=REV-02`): "Ask again" repeats that question. */
+  askCode?: string | null;
 }) {
   const t = useTranslations("receipt");
   const tc = useTranslations("common");
@@ -170,7 +180,7 @@ export function LoadReceipt({
             <ArrowRight aria-hidden />
           </Link>
           <Link
-            href={r.indicators_unlocked[0] ? `/ask?passport=${encodeURIComponent(r.indicators_unlocked[0].code)}` : "/ask"}
+            href={askAgainHref(r, askCode)}
             className="civic-button"
           >
             <MessageSquareText aria-hidden />

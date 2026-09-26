@@ -138,13 +138,31 @@ export type LoadReceipt = {
   coverage: { computable: number; total: number };
   loaded_at: string;
   duration_ms: number;
+} & LoadAudit;
+
+/**
+ * Additive audit fields the API also returns on receipts and sources (contract §7,
+ * "Additive fields"). Optional: no screen may depend on them, and REPLAY drops them.
+ */
+export type LoadAudit = {
+  sheet?: string | null;
+  header_row?: number;
+  steps?: IngestStep[];
+  column_errors?: { field: string; column: string; count: number; rows: string }[];
+  superseded?: { source_id: string; filename: string; rows: number; source_removed: boolean }[];
+  mapping?: { column: string; field: string | null }[];
 };
 
 // GET /sources -> SourceInfo[]
 export type SourceInfo = LoadReceipt & { mapping: { column: string; field: string | null }[] };
 
 // POST /demo/reset ; DELETE /ingest/recipes
-export type ResetResult = { ok: true; coverage: { computable: number; total: number } };
+export type ResetResult = {
+  ok: true;
+  coverage: { computable: number; total: number };
+  /** Additive: one line per preloaded file. */
+  loaded?: { source_id: string; filename: string; dataset: string; rows_loaded: number; reconciled: boolean }[];
+};
 export type DeleteRecipesResult = { ok: true; deleted: number };
 
 // GET /indicators?pack=core_kpi
@@ -202,8 +220,18 @@ export type LineageRows = {
   rows: { source_file: string; row_no: number; values: Record<string, string | number | null> }[];
 };
 
-// POST /definitions/population_basis
+// GET|POST /definitions/population_basis
 export type PopulationBasisBody = { value: PopulationBasis; reason?: string };
+export type PopulationBasisPin = {
+  ok: true;
+  key: "population_basis";
+  value: PopulationBasis;
+  label: L10n;
+  reason: string | null;
+  pinned_at: string | null;
+  options: { value: PopulationBasis; label: L10n; residents: number | null }[];
+  indicators: { code: string; name: L10n; value: number | null; period: string | null; basis: PopulationBasis }[];
+};
 
 // GET /coverage?pack=al_smp
 export type CoverageItem = {
@@ -255,6 +283,25 @@ export type AskEval = {
   commit: string | null;
   mode: "live" | "rules";
   by_label: { label: AskLabel; matched: number; total: number }[];
+  /** Additive detail written by `api/scripts/run_eval.py` (optional for clients). */
+  dirty?: boolean;
+  total?: { matched: number; total: number };
+  golden?: { version: number; questions: number; sq: number; en: number; tolerance_pct: number };
+  ingest?: { file: string; dataset: string; rows_loaded: number }[];
+  llm?: { calls: number; cost_usd: number };
+  items?: {
+    id: string;
+    locale: string;
+    stage: string;
+    question: string;
+    expected: AskLabel;
+    got: AskLabel;
+    passport_code: string | null;
+    value: number | null;
+    expected_value: number | null;
+    ok: boolean;
+    problems: string[];
+  }[];
 };
 
 // GET /llm/calls
@@ -273,7 +320,10 @@ export type LlmCall = {
 export type LlmCalls = { spent_usd: number; budget_usd: number; mode: "live" | "rules"; calls: LlmCall[] };
 
 // Errors: { "detail": { "code": string, "message": L10n } } with 4xx status.
-export type ApiErrorBody = { detail: { code: string; message: L10n } };
+// Request-validation failures (422 invalid_request) also list the offending fields.
+export type ApiErrorBody = {
+  detail: { code: string; message: L10n; errors?: { loc: (string | number)[]; type: string; msg: string }[] };
+};
 
 // ---------------------------------------------------------------- transport
 
@@ -394,8 +444,10 @@ export const deleteRecipes = (init?: RequestInit) =>
   apiDelete<DeleteRecipesResult>("/ingest/recipes", init);
 export const getCoverage = (pack = "al_smp", init?: RequestInit) =>
   apiGet<Coverage>(`/coverage?pack=${q(pack)}`, init);
+export const getPopulationBasis = (init?: RequestInit) =>
+  apiGet<PopulationBasisPin>("/definitions/population_basis", init);
 export const setPopulationBasis = (value: PopulationBasis, reason?: string, init?: RequestInit) =>
-  apiPost<{ ok: true } & Record<string, unknown>>(
+  apiPost<PopulationBasisPin>(
     "/definitions/population_basis",
     { value, ...(reason ? { reason } : {}) } satisfies PopulationBasisBody,
     init,

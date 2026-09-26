@@ -128,12 +128,16 @@ def test_rate_bounds():
 def test_off_target_severity_and_direction():
     (far,) = sig.off_target_signal(passport("FIN-02"), 37.0, "2026-08")
     assert far.severity == "warn"
-    assert far.message["sq"] == "37,0% në gusht 2026, nën objektivin 70% (−33,0 pikë përqindjeje)."
+    assert far.message["sq"] == (
+        "37,0% nga janari deri në gusht 2026, nën objektivin 70% (−33,0 pikë përqindjeje)."
+    )
+    assert far.period == "2026-08"  # signals keep the latest month (chart anchor)
     (near,) = sig.off_target_signal(passport("REQ-02"), 88.5, "2026-08")
     assert near.severity == "info"
     (days,) = sig.off_target_signal(passport("REQ-04"), 12.5, "2026-08")
     assert (
-        days.message["en"] == "12.5 days in August 2026, above the target of 10 days (+2.5 days)."
+        days.message["en"]
+        == "12.5 days from January to August 2026, above the target of 10 days (+2.5 days)."
     )
     assert sig.off_target_signal(passport("REQ-04"), 8.0, "2026-08") == []
     assert sig.off_target_signal(passport("WST-01"), 8.0, "2026-08") == []  # no target

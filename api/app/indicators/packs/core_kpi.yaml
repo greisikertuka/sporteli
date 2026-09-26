@@ -4,8 +4,9 @@
 # - Every formula is our reading of public definitions: formula_status "draft" (awaiting
 #   validation by the municipality / AMVV) until validated.
 # - "period" is the latest month present in the data (e.g. "2026-08"). Values are year-to-date
-#   (1 January to the end of the latest month) unless the indicator is a stock (REQ-03 open
-#   overdue at the latest date; HR-01/HR-02 at the latest headcount date).
+#   (1 January to the end of the latest month) unless the passport sets `period_kind: point`
+#   (a stock: REQ-03 open overdue at the latest date; HR-01 headcount at the latest date).
+#   The API reports year-to-date periods as an ISO month range ("2026-01/2026-08").
 # - value_sql returns one row (value, period); series_sql returns (period, value) by month;
 #   lineage_sql returns (source_id, row_no) of every contributing row; optional breakdown_sql
 #   returns (period, dimension, value) for unit-level plausibility checks.
@@ -164,6 +165,7 @@ passports:
   - code: REQ-03
     version: "0.1.0"
     area: requests
+    period_kind: point
     name: {sq: "Kërkesa të hapura me afat të kaluar", en: "Open requests past their deadline"}
     question:
       sq: "Sa kërkesa të hapura e kanë kaluar afatin?"
@@ -786,6 +788,7 @@ passports:
   - code: HR-01
     version: "0.1.0"
     area: hr
+    period_kind: point
     name: {sq: "Punonjës për 1.000 banorë", en: "Staff per 1,000 residents"}
     question:
       sq: "Sa punonjës ka bashkia për 1.000 banorë?"

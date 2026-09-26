@@ -29,15 +29,28 @@ If the API cannot be reached, every call is answered by the REPLAY engine in
 
 REPLAY computes nothing: `src/lib/fixtures/snapshot.ts` holds real API responses over the
 synthetic sample exports — passports, lineage, previews, receipts, answers and the SMP
-coverage in the start state, the full state and with the civil-registry basis — recorded by
-`scripts/record-replay.mjs`. The engine only tracks which exports are loaded and picks the
-matching response, so offline and live show the same numbers. Re-record after changing
-passports, samples or the ingest pipeline:
+coverage in the start state, after envelope 2 alone (8/13), the full state and with the
+civil-registry basis — recorded by `scripts/record-replay.mjs`. The engine only tracks which
+exports are loaded and picks the matching response, so offline and live show the same
+numbers; a test proves that REPLAY's composed after-envelope-2 state equals the recorded one.
+Re-record after changing passports, samples or the ingest pipeline:
 
 ```bash
 make api                                   # or any running API
 pnpm --dir web record-replay               # default http://localhost:8000; pass another URL as an argument
 pnpm --dir web test
+```
+
+## Live integration check
+
+`scripts/check-live.mjs` walks the whole gap-to-proof loop against a running API exactly as the
+screens call it (sample preview and multipart upload, commit, receipt, ask, board, envelopes,
+xlsx `Burimi` column, coverage, basis pin, format drift, error bodies) and validates every
+JSON response recursively against the types in `src/lib/api.ts`. With a web URL it also
+fetches each page. It resets the API's demo database, so use a scratch API:
+
+```bash
+pnpm --dir web check-live http://localhost:8100 http://localhost:3100
 ```
 
 ## Conventions

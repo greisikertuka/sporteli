@@ -1,7 +1,9 @@
 /**
  * Shape of the REPLAY snapshot recorded by `web/scripts/record-replay.mjs`. Every field is
- * a real API response (contract §7 keys only), captured in one of three demo states:
+ * a real API response (contract §7 keys only), captured in one of four demo states:
  *   start – after `POST /demo/reset` (requests + budget + population, 6/13);
+ *   mid   – after envelope 2 alone (revenue, 8/13): the gap-to-proof beat, kept whole as the
+ *           oracle the web tests compare REPLAY's composed state against;
  *   full  – after envelopes 1–3 are committed with recipes (13/13, census basis);
  *   civil_registry – the full state with the population basis pinned to the civil registry.
  */
@@ -19,6 +21,7 @@ import type {
   LlmCalls,
   LoadReceipt,
   Passport,
+  PopulationBasisPin,
   SampleFile,
   SourceInfo,
 } from "../api";
@@ -37,6 +40,19 @@ export type ReplaySnapshot = {
   eval: AskEval | null;
   llm_calls: LlmCalls;
   board: { start: BoardMeta; full: BoardMeta };
+  /** The state after envelope 2 alone; `null` if the API has no envelope 2 sample. */
+  mid: {
+    after: string;
+    board: IndicatorBoard;
+    /** The passports that envelope unlocked. */
+    passports: ByCode<Passport>;
+    /** SMP coverage items that differ from the start state. */
+    coverage: CoverageItem[];
+    /** Every example chip's answer in that state. */
+    examples: Record<string, AskAnswer>;
+  } | null;
+  /** `GET /definitions/population_basis` at start and full, and the civil-registry pin response. */
+  basis_pin: { start: PopulationBasisPin; census_2023: PopulationBasisPin; civil_registry: PopulationBasisPin };
   passports: {
     start: ByCode<Passport>;
     full: ByCode<Passport>;

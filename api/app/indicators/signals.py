@@ -402,16 +402,19 @@ def off_target_signal(p: Passport, value: float | None, period: str | None) -> l
         if diff is None:
             diff = _signed(_fmt(p, abs(gap), loc), gap < 0)
         when = format_period(period, loc)
+        ytd = p.reported_period(period) != period
         if loc == "sq":
             side = (
                 "nën objektivin" if p.direction == "higher_better" else "mbi kufirin e objektivit"
             )
-            msg[loc] = f"{v} në {when}, {side} {tgt} ({diff})."
+            span = f"nga janari deri në {when}" if ytd else f"në {when}"
+            msg[loc] = f"{v} {span}, {side} {tgt} ({diff})."
         else:
             side = (
                 "below the target of" if p.direction == "higher_better" else "above the target of"
             )
-            msg[loc] = f"{v} in {when}, {side} {tgt} ({diff})."
+            span = f"from January to {when}" if ytd else f"in {when}"
+            msg[loc] = f"{v} {span}, {side} {tgt} ({diff})."
     return [Signal("off_target", severity, msg, period, rel * 100)]
 
 

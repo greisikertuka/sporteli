@@ -147,7 +147,11 @@ export function PassportView({
           {p.missing.map((m) => (
             <div key={m.dataset} className="passport-missing-item">
               <p>{t("passport.missingBody", { name: pick(m.name, locale), owner: pick(m.owner, locale) })}</p>
-              <Link className="civic-button primary" href={`/ingest?dataset=${encodeURIComponent(m.dataset)}`} onClick={onNavigate}>
+              <Link
+                className="civic-button primary"
+                href={`/ingest?dataset=${encodeURIComponent(m.dataset)}&ask=${encodeURIComponent(p.code)}`}
+                onClick={onNavigate}
+              >
                 <Upload aria-hidden />
                 {t("tile.upload")}
               </Link>

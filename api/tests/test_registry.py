@@ -315,6 +315,14 @@ def test_formatting_and_answers():
     assert reg.format_value(None, "percent", "en") == "—"
     assert reg.format_period("2026-08", "sq") == "gusht 2026"
     assert reg.format_period("2026-08", "en") == "August 2026"
+    assert reg.format_period("2026-01/2026-08", "sq") == "janar – gusht 2026"
+    assert reg.format_period("2025-11/2026-02", "en") == "November 2025 – February 2026"
+    # year-to-date passports report a month range; stocks (period_kind: point) the month
+    assert reg.get_passport("REQ-01").reported_period("2026-08") == "2026-01/2026-08"
+    assert reg.get_passport("REQ-01").reported_period("2026-01") == "2026-01"
+    assert reg.get_passport("REQ-01").reported_period(None) is None
+    assert reg.get_passport("REQ-03").reported_period("2026-08") == "2026-08"
+    assert reg.get_passport("HR-01").reported_period("2026-08") == "2026-08"
     assert reg.row_ranges([9, 4, 5, 6, 12, 13]) == "4–6, 9, 12–13"
     p = reg.get_passport("REV-02")
     ans = reg.render_answer(p, 55.04, "2026-08")

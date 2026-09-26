@@ -419,7 +419,7 @@ def summary(e: Evaluated) -> dict:
         "unit_label": p.label,
         "state": e.state,
         "value": r.value if r else None,
-        "period": r.period if r else None,
+        "period": p.reported_period(r.period) if r else None,
         "previous": e.previous,
         "target": p.target,
         "direction": p.direction,
@@ -621,7 +621,7 @@ def basis_response(con: duckdb.DuckDBPyConnection, pack: str = "core_kpi") -> di
         value = period = None
         if set(p.required_datasets) <= loaded:
             r = reg.compute(p, con, pin["value"])
-            value, period = r.value, r.period
+            value, period = r.value, p.reported_period(r.period)
         indicators.append(
             {
                 "code": p.code,

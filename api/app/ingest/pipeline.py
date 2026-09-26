@@ -411,15 +411,22 @@ def _read_phase(data: bytes, filename: str, use_llm: bool) -> PreviewState:
         sq = loc == "sq"
         if not pii:
             return "Nuk u gjetën kolona personale." if sq else "No personal columns found."
-        items = [f"'{layout.headers[j]}' ({PII_LABELS[f.kind][loc]})" for j, f in pii.items()]
+        items = ", ".join(
+            f"'{layout.headers[j]}' ({PII_LABELS[f.kind][loc]})" for j, f in pii.items()
+        )
+        one = len(pii) == 1
+        if sq:
+            head = "1 kolonë personale u hoq" if one else f"{len(pii)} kolona personale u hoqën"
+            tail = "Vlerat e saj" if one else "Vlerat e tyre"
+            return (
+                f"{head} para profilizimit dhe para AI: {items}. "
+                f"{tail} nuk ruhen dhe nuk dërgohen askund."
+            )
+        head = "1 personal column" if one else f"{len(pii)} personal columns"
+        tail = "Its" if one else "Their"
         return (
-            f"{len(pii)} kolona personale u hoqën para profilizimit dhe para AI: "
-            + ", ".join(items)
-            + ". Vlerat e tyre nuk ruhen dhe nuk dërgohen askund."
-            if sq
-            else f"{len(pii)} personal columns removed before profiling and before AI: "
-            + ", ".join(items)
-            + ". Their values are not stored or sent anywhere."
+            f"{head} removed before profiling and before AI: {items}. "
+            f"{tail} values are not stored or sent anywhere."
         )
 
     log.add("pii", "ok", pii_msg("sq"), pii_msg("en"))

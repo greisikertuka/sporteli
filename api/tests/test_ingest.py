@@ -95,6 +95,12 @@ def test_every_sample_previews_correctly(db, name):
         assert s["status"] in ("ok", "warn", "info")
         assert s["message"]["sq"] and s["message"]["en"]
         assert isinstance(s["ms"], int)
+    pii_step = next(s for s in p["steps"] if s["code"] == "pii")["message"]
+    if len(pii) == 1:  # singular agreement in both languages
+        assert pii_step["sq"].startswith("1 kolonë personale u hoq para")
+        assert pii_step["en"].startswith("1 personal column removed")
+    elif pii:
+        assert pii_step["sq"].startswith(f"{len(pii)} kolona personale u hoqën")
 
     # rules mode (no key on this machine): every required field mapped, all amber
     fields = {m["field"] for m in p["mapping"] if m["field"]}

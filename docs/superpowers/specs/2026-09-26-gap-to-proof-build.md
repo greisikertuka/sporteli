@@ -90,6 +90,8 @@ A passport is a versioned YAML entry. Fields: `code`, `version`, `area` (`reques
 
 Per-capita passports use the pinned population basis (`definition_pin` key `population_basis`, default `census_2023`); responses state the basis used.
 
+Periods: values are year-to-date (1 January to the end of the latest month in the data) unless the passport sets `period_kind: point` (a stock at the end of the latest month: REQ-03, HR-01). The API reports `period` of a year-to-date value as an ISO 8601 month range (`"2026-01/2026-08"`, shown as "janar – gusht 2026"); a stock reports the month (`"2026-08"`). Series, sparklines and signal `period`s are always single months, and answer templates receive the latest month (they already say "Nga janari deri në {period}").
+
 Start state after `POST /api/v1/demo/reset`: requests + budget + population loaded → 6/13 computable; gaps: waste (zarfi-1 → WST-01..03), revenue (zarfi-2 → REV-01..02; REV-02 joins two departments' exports), staff (zarfi-3 → HR-01, HR-02).
 
 `al_smp.yaml` is a **coverage pack**, not computed values: the 52 indicators of SMP 2024 Annex A (names in Albanian verbatim, area headings), each with `state`: `computable` (maps to a core passport: #13→REV-02, #14→WST-02, #15→WST-03, #23→HR-02, #25→HR-01), `document` (publication/plan-exists checks: #5, #16, #22, #26, #27, #28, #30, #31, #35, #40), `national` (#41–#52: "Burimi: Ministria e Financave, llogaritur nga AMVV"), `missing` (all others, with the owner who would hold the data). Displayed with a "draft mapping · pending organiser approval" banner.
@@ -243,7 +245,27 @@ type AskExample = { id: string; question: L10n; passport_code: string | null;
 //            cost_usd: number; latency_ms: number; ok: boolean; error: string | null; sent: unknown }[] }
 ```
 
-Errors: `{ "detail": { "code": string, "message": L10n } }` with 4xx status.
+Errors: `{ "detail": { "code": string, "message": L10n } }` with 4xx status. Request-validation failures (`422 invalid_request`) add `detail.errors: { loc: (string|number)[]; type: string; msg: string }[]`.
+
+```ts
+// GET | POST /definitions/population_basis
+type PopulationBasisPin = { ok: true; key: "population_basis"; value: "census_2023" | "civil_registry"; label: L10n;
+  reason: string | null; pinned_at: string | null;
+  options: { value: "census_2023" | "civil_registry"; label: L10n; residents: number | null }[];
+  indicators: { code: string; name: L10n; value: number | null; period: string | null; basis: string }[] };
+
+// Additive fields (optional for clients; no screen may depend on them, REPLAY drops them):
+// LoadReceipt (POST /ingest/commit) and SourceInfo (GET /sources) also carry
+type LoadAudit = { sheet?: string | null; header_row?: number; steps?: IngestStep[];
+  column_errors?: { field: string; column: string; count: number; rows: string }[];
+  superseded?: { source_id: string; filename: string; rows: number; source_removed: boolean }[];
+  mapping?: { column: string; field: string | null }[] };   // required on SourceInfo, echoed on the receipt
+// POST /demo/reset also returns loaded?: { source_id; filename; dataset; rows_loaded; reconciled: boolean }[]
+// GET /ask/eval also returns dirty?, total?, golden?, ingest?, llm?, items? (per-question detail from
+//   api/scripts/run_eval.py); a label with no questions in the golden set (exploratory in RULES mode) is omitted.
+```
+
+`web/src/lib/api.ts` mirrors all of the above; `pnpm --dir web check-live <api-url> [web-url]` (`web/scripts/check-live.mjs`) walks the §9 loop against a live API and validates every response against those types recursively.
 
 ## 8. Web screens (Albanian default, English toggle)
 

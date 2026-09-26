@@ -63,7 +63,7 @@ export function IndicatorTile({
         </div>
         <Link
           className="tile-cta"
-          href={`/ingest?dataset=${encodeURIComponent(i.missing[0]?.dataset ?? "")}`}
+          href={`/ingest?dataset=${encodeURIComponent(i.missing[0]?.dataset ?? "")}&ask=${encodeURIComponent(i.code)}`}
         >
           {t("upload")}
           <ArrowUpRight aria-hidden />

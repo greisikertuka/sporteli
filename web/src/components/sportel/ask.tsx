@@ -22,7 +22,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { useApi } from "@/hooks/use-api";
 import { type AskAnswer, type AskEval, type AskExample, type AskLabel } from "@/lib/api";
-import { ask, getEval, getExamples } from "@/lib/client";
+import { ask, getEval, getExamples, getPassport } from "@/lib/client";
 import { asLocale, formatCell, formatDateTime, formatIndicatorValue, formatMs, formatUsd, pick, summariseRanges } from "@/lib/format";
 import { ASK_LABEL_TONE, ASK_LABELS } from "@/lib/labels";
 
@@ -87,18 +87,28 @@ export function AskScreen({ passport }: { passport: string | null }) {
     }
   };
 
-  // `/ask?passport=REV-01` (from a load receipt): ask that passport's example once.
+  // `/ask?passport=REV-01` (from a load receipt or a passport): ask that passport's example
+  // chip once, or, when it has none, the passport's own canonical question.
   useEffect(() => {
     if (!passport || autoAsked.current || !examples.data) return;
     const ex = examples.data.find((e) => e.passport_code === passport);
-    if (!ex) return;
-    autoAsked.current = true;
-    const text = pick(ex.question, locale);
-    const id = setTimeout(() => {
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      let text: string;
+      try {
+        text = ex ? pick(ex.question, locale) : pick((await getPassport(passport)).question, locale);
+      } catch {
+        return; // unknown passport: leave the page as it is
+      }
+      if (cancelled || autoAsked.current) return;
+      autoAsked.current = true;
       setQuestion(text);
-      void run(text, ex.id);
+      void run(text, ex?.id);
     }, 0);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passport, examples.data, locale]);
 
@@ -230,7 +240,10 @@ export function AskScreen({ passport }: { passport: string | null }) {
             {evalData && (
               <p className="fine-print">
                 {t("evalTitle", { total: evalData.by_label.reduce((s, r) => s + r.total, 0) })} ·{" "}
-                {t("evalNote", { time: formatDateTime(evalData.run_at, locale), mode: evalData.mode })}
+                {t("evalNote", {
+                  time: formatDateTime(evalData.run_at, locale),
+                  mode: evalData.mode === "live" ? tAll("header.aiLive") : tAll("header.aiRules"),
+                })}
               </p>
             )}
           </div>
@@ -314,7 +327,10 @@ function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: Ask
             </span>
             {a.gap.sample && <span className="gap-sample">{t("ask.gapSample", { name: a.gap.sample })}</span>}
           </div>
-          <Link className="civic-button primary" href={`/ingest?dataset=${encodeURIComponent(a.gap.dataset)}`}>
+          <Link
+            className="civic-button primary"
+            href={`/ingest?dataset=${encodeURIComponent(a.gap.dataset)}${a.passport_code ? `&ask=${encodeURIComponent(a.passport_code)}` : ""}`}
+          >
             <Upload aria-hidden />
             {t("ask.gapCta")}
           </Link>

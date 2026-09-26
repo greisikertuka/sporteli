@@ -45,7 +45,7 @@ type Phase =
   | { kind: "done"; receipt: Receipt }
   | { kind: "error"; error: unknown; file?: string };
 
-export function IngestScreen({ wanted }: { wanted: string | null }) {
+export function IngestScreen({ wanted, askCode = null }: { wanted: string | null; askCode?: string | null }) {
   const t = useTranslations("ingest");
   const locale = useLocale();
   const datasets = useApi("datasets", getDatasets);
@@ -180,7 +180,7 @@ export function IngestScreen({ wanted }: { wanted: string | null }) {
         )}
         {phase.kind === "done" && (
           <div className="receipt-stage">
-            <LoadReceipt receipt={phase.receipt} animate />
+            <LoadReceipt receipt={phase.receipt} animate askCode={askCode} />
             <button type="button" className="text-button" onClick={() => setPhase({ kind: "idle" })}>
               <FileUp aria-hidden />
               {t("another")}

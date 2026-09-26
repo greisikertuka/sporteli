@@ -66,7 +66,8 @@ function buildOption(a: {
     animationDuration: reduced ? 0 : 650,
     animationDurationUpdate: reduced ? 0 : 450,
     textStyle: { fontFamily: "var(--font-civic), system-ui, sans-serif" },
-    grid: { left: 6, right: 56, top: 28, bottom: 6, containLabel: true },
+    // ECharts 6: the documented replacement for the deprecated `containLabel: true`.
+    grid: { left: 6, right: 56, top: 28, bottom: 6, outerBoundsMode: "same", outerBoundsContain: "axisLabel" },
     xAxis: {
       type: "category",
       data: series.map((p) => periodTick(p.period, locale)),

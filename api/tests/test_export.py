@@ -67,7 +67,7 @@ def test_indicator_sheet_has_a_visible_source_column_and_comments(client):
 
     req = rows["REQ-01"]
     assert req["Vlera"].value == 24 and req["Vlera"].number_format == "#,##0"
-    assert req["Njësia"].value == "kërkesa" and req["Periudha"].value == "qershor 2026"
+    assert req["Njësia"].value == "kërkesa" and req["Periudha"].value == "janar – qershor 2026"
     assert req["Statusi"].value == "Pa objektiv" and req["Objektivi"].value == "—"
     burimi = req["Burimi"].value
     assert burimi.startswith("01_SINTETIKE_kerkesat.xlsx · rreshtat 4–27 · pasaporta v0.1.0 · ")
@@ -205,7 +205,7 @@ def test_open_data_csv(client):
     ]
     assert [r["code"] for r in rows] == ["REQ-01", "REQ-02", "REQ-03", "REQ-04", "FIN-01", "FIN-02"]
     req = rows[0]
-    assert req["value"] == "24" and req["unit"] == "count" and req["period"] == "2026-06"
+    assert req["value"] == "24" and req["unit"] == "count" and req["period"] == "2026-01/2026-06"
     assert req["name_sq"] == "Kërkesa të pranuara" and req["version"] == "0.1.0"
     assert req["formula_status"] == "draft" and req["synthetic"] == "true"
     assert req["sources"] == "01_SINTETIKE_kerkesat.xlsx (sha256:sha-s-req)"

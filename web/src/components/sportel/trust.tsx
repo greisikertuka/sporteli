@@ -110,7 +110,7 @@ export function TrustScreen() {
                 {t("evalNote", {
                   total: evalTotal,
                   time: formatDateTime(evaluation.data.run_at, locale),
-                  mode: evaluation.data.mode,
+                  mode: evaluation.data.mode === "live" ? th("aiLive") : th("aiRules"),
                 })}
               </p>
             </>

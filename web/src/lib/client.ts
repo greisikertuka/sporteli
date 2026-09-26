@@ -160,7 +160,7 @@ export const getCoverage = (pack = "al_smp") => withFallback(() => live.getCover
 export async function setPopulationBasis(value: PopulationBasis, reason?: string) {
   const result = await withFallback(
     () => live.setPopulationBasis(value, reason),
-    (fx) => fx.setPopulationBasis(value),
+    (fx) => fx.setPopulationBasis(value, reason),
   );
   broadcastRefresh("basis");
   return result;
