@@ -1,6 +1,6 @@
 // Sportel final pitch deck v2 — minimal text, big type (readable from the back of the room).
 // Run from a folder with pptxgenjs, sharp, react, react-dom, react-icons installed:
-//   node build.js ../FirmatGroup_Final.pptx
+//   node build.js ../Firmat_Final.pptx
 const pptxgen = require("pptxgenjs");
 const React = require("react");
 const RDS = require("react-dom/server");
@@ -9,7 +9,7 @@ const fa = require("react-icons/fa");
 const path = require("path");
 const N = require("./notes.js");
 
-const OUT = process.argv[2] || "FirmatGroup_Final.pptx";
+const OUT = process.argv[2] || "Firmat_Final.pptx";
 const ASSETS = path.join(__dirname, "..", "..", "assets");
 const AI4S_LOGO = path.join(ASSETS, "ai4society-logo.png");
 const SPORTEL_ICON = path.join(ASSETS, "sportel-icon.png");
@@ -30,7 +30,7 @@ async function icon(name, color) {
   const pres = new pptxgen();
   pres.layout = "LAYOUT_WIDE"; // 13.333 x 7.5, as the AI4Society template
   pres.title = "Sportel — Final pitch";
-  pres.company = "FirmatGroup";
+  pres.company = "Firmat";
   const W = 13.333;
   let n = 0;
 
@@ -58,7 +58,7 @@ async function icon(name, color) {
     s.addImage({ path: AI4S_LOGO, x: 0.5, y: 0.32, w: 1.1, h: 0.636 });
     s.addImage({ path: SPORTEL_ICON, x: 1.85, y: 0.36, w: 0.72, h: 0.558 });
     T(s, String(n).padStart(2, "0"), W - 1.0, 7.0, 0.5, 0.3, { fontSize: 11, bold: true, color: GREY, align: "right" });
-    T(s, "Sportel · FirmatGroup", 0.5, 7.0, 5, 0.3, { fontSize: 11, color: GREY });
+    T(s, "Sportel · Firmat", 0.5, 7.0, 5, 0.3, { fontSize: 11, color: GREY });
     if (kicker) T(s, kicker, 0.5, 1.2, 9, 0.4, { fontSize: 18, bold: true, color: TEAL_D });
     if (title) T(s, title, 0.5, 1.6, W - 1.0, 0.9, { fontSize: 40, bold: true, color: NAVY });
   }
@@ -71,7 +71,7 @@ async function icon(name, color) {
     T(s, "Report once, prove every number.", 0.5, 4.35, 6.8, 0.6, { fontSize: 24, italic: true, bold: true, color: TEAL_D });
     await screen(s, "passport", 7.55, 1.3, 5.3, 3.75);
     T(s, "Indicator passport · synthetic data", 7.55, 5.15, 5.3, 0.35, { fontSize: 13, italic: true, color: GREY, align: "center" });
-    T(s, "FirmatGroup  ·  AI4Society Hackathon Tirana", 0.5, 5.9, 12, 0.5, { fontSize: 20, bold: true, color: GREY });
+    T(s, "Firmat  ·  AI4Society Hackathon Tirana", 0.5, 5.9, 12, 0.5, { fontSize: 20, bold: true, color: GREY });
     s.addNotes(N[0]);
   }
 
@@ -193,15 +193,15 @@ async function icon(name, color) {
 
   // 8 · Team --------------------------------------------------------------
   {
-    const s = pres.addSlide(); chrome(s, "Team", "FirmatGroup");
-    const tm = [["FaChartLine", "[Name]", "Problem & users"], ["FaDesktop", "[Name]", "Demo & product"], ["FaLaptopCode", "[Name]", "Data & AI"], ["FaClipboardCheck", "[Name]", "Testing"]];
+    const s = pres.addSlide(); chrome(s, "Team", "Firmat");
+    const tm = [["FaLaptopCode", "Greisi Kertuka", "Full Stack Developer"], ["FaBrain", "Redjon Mezani", "AI Engineer"], ["FaDatabase", "Martin Shembitraku", "Backend Developer"], ["FaServer", "Fatjon Omeri", "DevOps & Full Stack Developer"]];
     const cw = (W - 1.0 - 0.3 * 3) / 4;
     for (let i = 0; i < tm.length; i++) {
       const [ic, name, role] = tm[i], x = 0.5 + i * (cw + 0.3);
       box(s, x, 2.75, cw, 2.15, i % 2 ? SOFT : MINT);
       await dot(s, ic, x + 0.3, 2.95, 0.75, i % 2 ? NAVY : TEAL, WHITE);
-      T(s, name, x + 0.3, 3.85, cw - 0.5, 0.45, { fontSize: 22, bold: true, color: NAVY });
-      T(s, role, x + 0.3, 4.3, cw - 0.5, 0.45, { fontSize: 18, color: GREY });
+      T(s, name, x + 0.25, 3.8, cw - 0.35, 0.45, { fontSize: 18, bold: true, color: NAVY });
+      T(s, role, x + 0.25, 4.22, cw - 0.35, 0.6, { fontSize: 16, color: GREY });
     }
     box(s, 0.5, 5.2, W - 1.0, 1.45, NAVY);
     T(s, "Report once, prove every number.", 0.85, 5.2, 7.2, 1.45, { fontSize: 28, bold: true, italic: true, color: WHITE, valign: "middle" });

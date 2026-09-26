@@ -2,7 +2,7 @@
 module.exports = [
 // 1 Title — 0:15
 `[0:00–0:15]
-Good morning. We are FirmatGroup, and this is Sportel, for Challenge 02, the decision-making dashboard.
+Good morning. We are Firmat, and this is Sportel, for Challenge 02, the decision-making dashboard.
 Sportel gives every head of department numbers they can defend: every number, with its proof.`,
 
 // 2 Problem — 0:45
@@ -47,5 +47,5 @@ Cost, as estimates: eight to twelve thousand euros to pilot-ready, two to four t
 
 // 8 Team — 0:10
 `[4:35–4:45 · this slide stays up during Q&A]
-We are FirmatGroup: [names]. Report once, prove every number. Thank you.`,
+We are Firmat: Greisi, full stack; Redjon, AI; Martin, backend; Fatjon, DevOps. We built this full loop this weekend. Report once, prove every number. Thank you.`,
 ];

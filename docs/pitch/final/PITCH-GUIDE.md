@@ -1,6 +1,6 @@
 # Sportel final pitch: guide (5 min + 3 min Q&A)
 
-The deck is `FirmatGroup_Final.pptx` (8 slides, in the Pitch Craft order). After mentor feedback it carries **minimal text in big type** (20pt+, numbers at 80–96pt). Everything you say is in each slide's **speaker notes** (about 720 words). To rebuild after an edit, change `src/build.js` or `src/notes.js` and run `node src/build.js FirmatGroup_Final.pptx` in a folder with `pptxgenjs sharp react react-dom react-icons` installed.
+The deck is `Firmat_Final.pptx` (8 slides, in the Pitch Craft order). After mentor feedback it carries **minimal text in big type** (20pt+, numbers at 80–96pt). Everything you say is in each slide's **speaker notes** (about 720 words). To rebuild after an edit, change `src/build.js` or `src/notes.js` and run `node src/build.js Firmat_Final.pptx` in a folder with `pptxgenjs sharp react react-dom react-icons` installed.
 
 ## 1. The selling point in one line
 
@@ -30,7 +30,9 @@ Why this wins on the scorecard:
 6. **Shkarko raportin (.xlsx):** an Excel report with a **Burimi** (source) column next to every value.
 7. **Header badges:** *Të dhëna sintetike* (synthetic data), and *AI LIVE* / *RREGULLA* / *REPLAY*. Always say the mode that is on screen.
 
-## 3. The demo video (record it today; the workshop says "recordings are safe")
+## 3. The demo video (recorded: `demo/sportel-demo.mp4`; script in `VIDEO-SCRIPT.md`)
+
+The video below was recorded from the running app with a hand-built waste CSV. The shot list that follows is for a manual re-take with the envelope file, if you want one.
 
 **Tool:** OBS Studio (free), or Windows **Win+G** (Game Bar) or **Win+Shift+R** (Snipping Tool video). Record at 1920×1080, browser at 110–125 % zoom, notifications off, synthetic badge visible.
 
@@ -135,8 +137,8 @@ Corrected wording in `docs/pitch/sportel-vs-elbasani-gov-al.md`: the SMP row no 
 
 ## 8. Still to do before 11:00 Sunday
 
-- [ ] Fill in the **team names** on slide 8 (they are currently `[Name]`), and confirm the contact email and repo link.
+- [x] Team names on slide 8. Confirm the contact email and repo link.
 - [ ] Confirm the wording of Elbasan's May 2026 recognition before saying it (slide 2 notes).
 - [ ] Public figures on slides 2 and 6 (52 indicators, 38 Kosovo municipalities): keep them only if the organisers approved "request 3". Otherwise say "national performance indicators".
-- [ ] Record the video and insert it on slide 3.
-- [ ] Submit as `FirmatGroup_Final.pptx` (or export to PDF), with the demo run instructions and the repo link.
+- [x] Video recorded (`demo/sportel-demo.mp4`). Insert it on slide 3: Insert → Video → This Device.
+- [ ] Submit as `Firmat_Final.pptx` (or export to PDF), with the demo run instructions and the repo link.
