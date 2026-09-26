@@ -191,9 +191,6 @@
   font-weight: 700;
   color: #fff8e6;
   background: radial-gradient(circle at 35% 30%, #c6452f, #8e2616 70%);
-  box-shadow:
-    0 0 0 3px rgb(142 38 22 / 0.25),
-    0 3px 6px rgb(0 0 0 / 0.25);
   z-index: 1;
 }
 .envelope-body {
@@ -243,26 +240,19 @@
   align-items: center;
   gap: 3px;
   font-weight: 600;
-  border-radius: 999px;
-  padding: 0 7px;
 }
 .envelope-state svg {
   width: 12px;
   height: 12px;
 }
 .envelope-state.loaded {
-  color: #1f6a4c;
-  background: #dcefe3;
+  color: var(--tone-success-fg);
 }
 .envelope-state.wanted {
-  color: #fff;
-  background: #214ba0;
+  color: var(--tone-info-fg);
 }
 .envelope.is-loaded .envelope-seal {
   background: radial-gradient(circle at 35% 30%, #3c9a73, #1f6a4c 70%);
-  box-shadow:
-    0 0 0 3px rgb(31 106 76 / 0.25),
-    0 3px 6px rgb(0 0 0 / 0.25);
 }
 .envelope.is-wanted {
   outline: 3px solid var(--city-yellow);
@@ -752,21 +742,15 @@
   vertical-align: top;
 }
 .mapping-table td:first-child {
-  border-left: 4px solid var(--tone-success-bd);
+  border-left: 1px solid var(--border);
   border-radius: 9px 0 0 9px;
 }
 .mapping-table td:last-child {
   border-right: 1px solid var(--border);
   border-radius: 0 9px 9px 0;
 }
-.mapping-table tr.low td:first-child {
-  border-left-color: var(--warning);
-}
 .mapping-table tr.is-pending td {
   background: var(--tone-warning-bg);
-}
-.mapping-table tr.is-confirmed.low td:first-child {
-  border-left-color: var(--proof);
 }
 .map-col {
   display: block;
@@ -1091,10 +1075,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: var(--tone-success-bg);
-  border: 1px solid var(--tone-success-bd);
   color: var(--tone-success-fg);
   font-family: var(--font-civic), sans-serif;
   font-size: 13.5px;
@@ -1107,10 +1087,6 @@
 .unlocked-chip .code {
   font-family: var(--font-mono-stack);
   font-size: 11px;
-  padding: 0 6px;
-  border-radius: 4px;
-  background: var(--proof);
-  color: #fff;
 }
 .dark .unlocked-chip .code {
   color: #0d1a14;
@@ -1150,13 +1126,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.14em;
-  padding: 6px 12px;
-  border: 3px double currentColor;
-  border-radius: 6px;
-  transform: rotate(-11deg);
-  opacity: 0.85;
   pointer-events: none;
-  background: color-mix(in oklab, var(--paper) 70%, transparent);
 }
 .receipt-stamp.ok {
   color: var(--proof);
@@ -1498,14 +1468,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border: 3px double currentColor;
-  border-radius: 6px;
   font-family: var(--font-mono-stack);
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  transform: rotate(-2.5deg);
   white-space: nowrap;
 }
 .label-stamp svg {
@@ -1514,23 +1480,15 @@
 }
 .label-stamp.tone-success {
   color: var(--tone-success-fg);
-  background: var(--tone-success-bg);
-  border-color: currentColor;
 }
 .label-stamp.tone-warning {
   color: var(--tone-warning-fg);
-  background: var(--tone-warning-bg);
-  border-color: currentColor;
 }
 .label-stamp.tone-danger {
   color: var(--tone-danger-fg);
-  background: var(--tone-danger-bg);
-  border-color: currentColor;
 }
 .label-stamp.tone-neutral {
   color: var(--tone-neutral-fg);
-  background: var(--tone-neutral-bg);
-  border-color: currentColor;
 }
 .label-stamp.is-new {
   font-size: 15px;
@@ -1546,24 +1504,6 @@
   position: relative;
   overflow: hidden;
   animation: rise 0.35s ease-out both;
-}
-.answer-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 4px;
-}
-.answer-card.label-verified::before {
-  background: var(--proof);
-}
-.answer-card.label-exploratory::before {
-  background: var(--warning);
-}
-.answer-card.label-blocked::before {
-  background: var(--destructive);
-}
-.answer-card.label-not_answerable::before {
-  background: repeating-linear-gradient(90deg, var(--gap-border) 0 8px, transparent 8px 12px);
 }
 .answer-head {
   display: flex;
@@ -1772,9 +1712,6 @@
   font-family: var(--font-mono-stack);
   font-size: 10px;
   letter-spacing: 0.1em;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--tone-info-bg);
   color: var(--tone-info-fg);
 }
 .history {
@@ -1849,10 +1786,6 @@
   font-family: var(--font-mono-stack);
   font-size: 11px;
   font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--muted);
   white-space: nowrap;
 }
 
@@ -2163,15 +2096,10 @@
 .state-chip {
   font-size: 11.5px;
   font-weight: 600;
-  padding: 1px 9px;
-  border-radius: 999px;
-  border: 1px solid;
   white-space: nowrap;
 }
 .state-chip.tone-gap {
   color: var(--gap-ink);
-  border-style: dashed;
-  border-color: var(--gap-border);
 }
 .coverage-passport {
   display: inline-flex;
@@ -2244,10 +2172,6 @@
   font-size: 10.5px;
   letter-spacing: 0.1em;
   color: var(--tone-warning-fg);
-  border: 1.5px solid currentColor;
-  padding: 2px 8px;
-  border-radius: 3px;
-  transform: rotate(-2deg);
   text-align: right;
 }
 .report-heading {
@@ -2304,10 +2228,6 @@
   display: inline-flex;
   align-items: baseline;
   gap: 2px;
-  padding: 0 7px;
-  border-radius: 6px;
-  border: 1px solid var(--tone-success-bd);
-  background: var(--tone-success-bg);
   color: var(--tone-success-fg);
   font-weight: 700;
   font-size: 0.95em;
@@ -2410,13 +2330,7 @@
   background: linear-gradient(90deg, color-mix(in oklab, var(--tone-info-bg) 70%, var(--card)) 50%, var(--sql-bg) 50%);
 }
 .duty-divider span {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--city-yellow);
-  color: var(--city-yellow-ink);
+  color: var(--muted-foreground);
   font-weight: 700;
 }
 .trust-row {
@@ -2441,8 +2355,6 @@
   align-items: center;
   gap: 7px;
   margin: 10px 0 8px;
-  padding: 4px 12px;
-  border-radius: 999px;
   font-family: var(--font-mono-stack);
   font-size: 13px;
   font-weight: 700;
@@ -2453,11 +2365,9 @@
   height: 15px;
 }
 .mode-flag.live {
-  background: var(--tone-success-bg);
   color: var(--tone-success-fg);
 }
 .mode-flag.rules {
-  background: var(--tone-neutral-bg);
   color: var(--tone-neutral-fg);
 }
 .mode-card > p {
@@ -2671,9 +2581,6 @@
   .lead-callout {
     padding: 22px 18px;
   }
-  .proof-counter::after {
-    left: 18px;
-  }
   .proof-meter {
     gap: 3px;
   }
@@ -2751,13 +2658,6 @@
     border-radius: 10px;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-left: 4px solid var(--tone-success-bd);
-  }
-  .mapping-table tr.low {
-    border-left-color: var(--warning);
-  }
-  .mapping-table tr.is-confirmed.low {
-    border-left-color: var(--proof);
   }
   .mapping-table td,
   .mapping-table td:first-child,

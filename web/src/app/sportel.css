@@ -251,10 +251,7 @@ a.text-button {
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--card);
+  padding: 0;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -268,18 +265,13 @@ a.text-button {
 }
 .status-pill.proof {
   color: var(--tone-success-fg);
-  background: var(--tone-success-bg);
-  border-color: var(--tone-success-bd);
   font-variant-numeric: tabular-nums;
 }
 .status-pill.synthetic {
   color: var(--tone-warning-fg);
-  background: var(--tone-warning-bg);
-  border-color: var(--tone-warning-bd);
 }
 .status-pill.ai.live {
   color: var(--tone-success-fg);
-  border-color: var(--tone-success-bd);
 }
 .status-pill.ai.rules {
   font-family: var(--font-mono-stack);
@@ -287,9 +279,7 @@ a.text-button {
   letter-spacing: 0.06em;
 }
 .status-pill.replay {
-  color: #fff;
-  background: repeating-linear-gradient(135deg, #8a4b0f 0 8px, #a35c16 8px 16px);
-  border-color: #7a420c;
+  color: var(--tone-warning-fg);
   font-family: var(--font-mono-stack);
   letter-spacing: 0.1em;
 }
@@ -298,16 +288,6 @@ a.text-button {
   height: 7px;
   border-radius: 50%;
   background: var(--proof);
-  box-shadow: 0 0 0 0 var(--proof-glow);
-  animation: live-pulse 1.8s ease-out infinite;
-}
-@keyframes live-pulse {
-  70% {
-    box-shadow: 0 0 0 7px transparent;
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
 }
 .api-status {
   display: inline-flex;
@@ -406,10 +386,7 @@ a.text-button {
   flex: none;
 }
 .replay-stamp-tag {
-  padding: 1px 7px;
-  border-radius: 999px;
-  color: #fff;
-  background: repeating-linear-gradient(135deg, #8a4b0f 0 8px, #a35c16 8px 16px);
+  color: var(--tone-warning-fg);
   font-family: var(--font-mono-stack);
   font-size: 11px;
   font-weight: 600;
@@ -421,8 +398,8 @@ a.text-button {
 }
 /* FIN-01 approximates SMP #47 (computed by AMVV): its chip must not look like a direct SMP. */
 .tile-smp.internal {
-  border-style: dashed;
-  background: transparent;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
 }
 .trend-kind {
   margin: 4px 0 0;
@@ -460,9 +437,6 @@ a.text-button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
@@ -474,28 +448,18 @@ a.text-button {
 }
 .tone-success {
   color: var(--tone-success-fg);
-  background: var(--tone-success-bg);
-  border-color: var(--tone-success-bd);
 }
 .tone-warning {
   color: var(--tone-warning-fg);
-  background: var(--tone-warning-bg);
-  border-color: var(--tone-warning-bd);
 }
 .tone-danger {
   color: var(--tone-danger-fg);
-  background: var(--tone-danger-bg);
-  border-color: var(--tone-danger-bd);
 }
 .tone-neutral {
   color: var(--tone-neutral-fg);
-  background: var(--tone-neutral-bg);
-  border-color: var(--tone-neutral-bd);
 }
 .tone-info {
   color: var(--tone-info-fg);
-  background: var(--tone-info-bg);
-  border-color: var(--tone-info-bd);
 }
 .tone-text-success {
   color: var(--tone-success-fg);
@@ -516,11 +480,7 @@ a.text-button {
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 1px 7px;
-  border-radius: 5px;
-  background: var(--code-bg);
   color: var(--foreground);
-  border: 1px solid var(--border);
   white-space: nowrap;
 }
 .synthetic-mark {
@@ -677,15 +637,6 @@ a.text-button {
   min-width: 0;
   position: relative;
 }
-.proof-counter::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 30px;
-  width: 64px;
-  height: 3px;
-  background: var(--city-yellow);
-}
 .proof-count {
   line-height: 0.9;
   font-variant-numeric: lining-nums;
@@ -768,13 +719,6 @@ a.text-button {
     background: repeating-linear-gradient(135deg, transparent 0 5px, var(--hatch) 5px 6px);
     border-style: dashed;
     border-color: var(--gap-border);
-    box-shadow: 0 0 0 0 var(--proof-glow);
-  }
-  60% {
-    box-shadow: 0 0 0 6px var(--proof-glow);
-  }
-  to {
-    box-shadow: 0 0 0 0 transparent;
   }
 }
 .proof-note {
@@ -1066,19 +1010,6 @@ a.text-button {
   border: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
 }
-.tile-proof::before {
-  content: "";
-  position: absolute;
-  left: -1px;
-  top: 14px;
-  bottom: 14px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--proof);
-}
-.tile-proof[data-status="off_track"]::before {
-  background: var(--warning);
-}
 .tile:hover {
   transform: translateY(-2px);
   box-shadow:
@@ -1108,11 +1039,7 @@ a.text-button {
   font-family: var(--font-mono-stack);
   font-size: 10.5px;
   letter-spacing: 0.02em;
-  padding: 1px 6px;
-  border-radius: 5px;
   color: var(--tone-info-fg);
-  background: var(--tone-info-bg);
-  border: 1px solid var(--tone-info-bd);
   white-space: nowrap;
 }
 .tile-signal {
@@ -1122,10 +1049,6 @@ a.text-button {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--tone-warning-fg);
-  background: var(--tone-warning-bg);
-  border: 1px solid var(--tone-warning-bd);
-  border-radius: 999px;
-  padding: 0 7px;
 }
 .tile-signal svg {
   width: 12px;
@@ -1142,11 +1065,6 @@ a.text-button {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--proof);
-  border: 1.5px solid currentColor;
-  border-radius: 4px;
-  padding: 1px 5px;
-  transform: rotate(-3deg);
-  opacity: 0.85;
 }
 .tile-stamp svg {
   width: 11px;
@@ -1376,7 +1294,6 @@ a.text-button {
     border-style: dashed;
     border-color: var(--gap-border);
     background-color: var(--muted);
-    box-shadow: 0 0 0 0 var(--proof-glow);
     filter: grayscale(1);
   }
   45% {
@@ -1384,7 +1301,6 @@ a.text-button {
     border-color: var(--proof);
   }
   70% {
-    box-shadow: 0 0 0 9px var(--proof-glow);
     filter: none;
   }
   100% {
@@ -1395,12 +1311,12 @@ a.text-button {
 }
 @keyframes stamp-in {
   from {
-    transform: scale(2.4) rotate(-14deg);
+    transform: scale(0.92);
     opacity: 0;
   }
   to {
-    transform: rotate(-3deg);
-    opacity: 0.85;
+    transform: none;
+    opacity: 1;
   }
 }
 

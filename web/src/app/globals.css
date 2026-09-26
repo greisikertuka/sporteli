@@ -580,11 +580,8 @@
 }
 .count-badge {
   color: var(--warning);
-  background: var(--warning-soft);
   font-size: 12px;
-  font-weight: 500;
-  padding: 2px 7px;
-  border-radius: 5px;
+  font-weight: 600;
 }
 .data-table {
   width: 100%;
