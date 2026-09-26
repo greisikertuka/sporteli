@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sportel</title>
+<style>
+  :root {
+    /* Elbasan verdhëblu palette, same as the web app */
+    --blue: #153574; --gold: #EDC443; --navy: #172C54; --action: #214BA0;
+    --gold-dark: #A07812; --stone: #F7F7F3; --pale: #F8EDBF;
+    --bg: var(--stone); --panel: #FFFFFF; --line: #E4E3DA; --ink: var(--navy); --muted: #4A5A78;
+    --accent: var(--gold-dark); --accent2: var(--action); --ok: #1F7A4D; --no: #B3261E;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+    padding: 6vh 7vw 9vh; opacity: 0; pointer-events: none; transition: opacity .35s ease, transform .35s ease;
+    transform: translateX(24px); overflow-y: auto; }
+  .slide.active { opacity: 1; pointer-events: auto; transform: none; }
+  .slide.hero { background: var(--blue); color: #FFFFFF; }
+  .slide.hero .accent, .slide.hero .kicker { color: var(--gold); }
+  .slide.hero .lead { color: #D6DEEE; }
+  .kicker { color: var(--accent); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    font-size: clamp(12px, 1.3vw, 16px); margin-bottom: 1.2vh; }
+  h1 { font-size: clamp(40px, 7vw, 96px); line-height: 1.02; letter-spacing: -.02em; }
+  h2 { font-size: clamp(24px, 3.4vw, 48px); line-height: 1.1; margin-bottom: 3.5vh; letter-spacing: -.01em; }
+  p, li { font-size: clamp(16px, 1.9vw, 25px); line-height: 1.45; }
+  .lead { color: var(--muted); margin-top: 3vh; max-width: 70ch; }
+  .accent { color: var(--accent); }
+  ul { list-style: none; display: grid; gap: 1.8vh; }
+  li::before { content: "→ "; color: var(--accent); font-weight: 700; }
+  .grid { display: grid; gap: 1.6vw; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 2.6vh 1.6vw;
+    box-shadow: 0 1px 2px rgba(23,44,84,.06); }
+  .card h3 { font-size: clamp(16px, 1.8vw, 24px); margin-bottom: 1vh; color: var(--accent2); }
+  .card p, .card li { font-size: clamp(13px, 1.45vw, 19px); }
+  .card p { color: var(--muted); }
+  .card ul { gap: 1vh; }
+  .card.yes { border-top: 4px solid var(--gold); }
+  .yes li::before { content: "✓ "; color: var(--ok); }
+  .no li::before { content: "✕ "; color: var(--no); }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 1.1vw; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 2vh 1.4vw;
+    font-size: clamp(15px, 1.9vw, 25px); font-weight: 600; }
+  .step small { display: block; font-weight: 400; color: var(--muted); font-size: .62em; margin-top: .5vh; }
+  .flow .step.gold { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+  .flow .step.gold small { color: var(--navy); }
+  .arrow { color: var(--accent); font-size: clamp(18px, 2.2vw, 30px); }
+  .tag { display: inline-block; font-size: .62em; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    border-radius: 999px; padding: 2px 10px; margin-top: .8vh; }
+  .tag.have { background: #E3E9F5; color: var(--action); }
+  .tag.build { background: var(--gold); color: var(--navy); }
+  .legend { display: flex; gap: 1.5vw; margin-top: 3vh; color: var(--muted); font-size: clamp(13px, 1.3vw, 17px); align-items: center; }
+  .legend .tag { margin: 0 6px 0 0; font-size: .8em; }
+  /* timeline */
+  .timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1vw; }
+  .phase { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 2vh 1.1vw;
+    border-top: 5px solid var(--action); }
+  .phase.cp { border-top-color: var(--gold); }
+  .phase .when { font-weight: 700; color: var(--accent); font-size: clamp(11px, 1.1vw, 15px); text-transform: uppercase; letter-spacing: .06em; }
+  .phase h3 { font-size: clamp(15px, 1.6vw, 21px); margin: .6vh 0 1vh; }
+  .phase li { font-size: clamp(12px, 1.25vw, 16px); line-height: 1.35; }
+  .phase ul { gap: .8vh; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 1.3vh 1.2vw; border-bottom: 1px solid var(--line); font-size: clamp(13px, 1.4vw, 18px); vertical-align: top; }
+  th { background: var(--blue); color: #FFFFFF; font-weight: 600; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  code { font-family: Consolas, "Cascadia Mono", monospace; font-size: .92em; background: var(--pale); color: var(--navy); padding: 0 5px; border-radius: 4px; }
+  .logo-card { background: #FFFFFF; border-radius: 20px; padding: 2vh 3vw; width: fit-content; margin-bottom: 3vh; }
+  .logo-card img { display: block; height: clamp(140px, 34vh, 340px); width: auto; }
+  .logo-card.small img { height: clamp(70px, 14vh, 140px); }
+  .foot { position: fixed; bottom: 2.5vh; left: 7vw; right: 7vw; display: flex; justify-content: space-between;
+    align-items: center; color: var(--muted); font-size: 14px; }
+  body.on-hero .foot, body.on-hero .nav { color: #D6DEEE; border-color: #3A5A9A; }
+  .brand { display: inline-flex; align-items: center; gap: 8px; }
+  .brand img { height: 22px; background: #FFFFFF; border-radius: 5px; padding: 2px; }
+  .bar { position: fixed; top: 0; left: 0; height: 5px; background: var(--gold); z-index: 2; transition: width .35s ease; }
+  .nav { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 4px 12px;
+    cursor: pointer; font: inherit; }
+  .nav:hover { color: var(--ink); border-color: var(--muted); }
+  @media (max-width: 800px) { .timeline { grid-template-columns: 1fr 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .slide, .bar { transition: none; } }
+  @media print {
+    html, body { overflow: visible; height: auto; }
+    .slide { position: relative; opacity: 1; transform: none; height: 100vh; page-break-after: always; }
+    .foot, .bar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+
+<!-- 1 -->
+<section class="slide hero">
+  <div class="kicker">FirmatGroup · Track D · AI4Society Hackathon 2026 · Checkpoint 1</div>
+  <div class="logo-card"><img src="assets/sportel-logo.png" alt="Sportel logo"></div>
+  <p class="lead">One place for Elbasan's municipal data. Any department export is onboarded in minutes,
+    then turned into KPIs, trends and answers leadership can trust. This is our plan for the next 30 hours.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>Data lives in separate department systems</h2>
+  <ul>
+    <li>Nobody gets one view of services, operations and citizen requests</li>
+    <li>Numbers are copied by hand from spreadsheet to spreadsheet</li>
+    <li>Reports reach leadership late, and no one can check where a number came from</li>
+  </ul>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kicker">Who it's for</div>
+  <h2>Three users, one task each</h2>
+  <div class="grid">
+    <div class="card"><h3>Leadership</h3><p>See how the municipality is doing at a glance, and ask a question without waiting for an analyst.</p></div>
+    <div class="card"><h3>Department heads</h3><p>Track performance against targets and spot a growing backlog early.</p></div>
+    <div class="card"><h3>Planning &amp; reporting</h3><p>A new export arrived: get it into the shared picture in minutes.</p></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">The idea</div>
+  <h2>Integration <span class="accent">is</span> the product</h2>
+  <div class="flow">
+    <div class="step">1 · Upload<small>CSV / XLSX export</small></div><span class="arrow">→</span>
+    <div class="step">2 · Confirm<small>AI proposes column mapping</small></div><span class="arrow">→</span>
+    <div class="step">3 · See<small>KPIs, trends, scorecards</small></div><span class="arrow">→</span>
+    <div class="step">4 · Ask<small>in Albanian or English</small></div><span class="arrow">→</span>
+    <div class="step gold">5 · Verify<small>SQL + source file shown</small></div>
+  </div>
+  <p class="lead">Mappings are saved, so next month's export from the same department loads with one click.
+    This five-step flow is exactly what we will demo at Checkpoint 2.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kicker">Where we start</div>
+  <h2>Today: a clickable prototype on mock data</h2>
+  <div class="grid">
+    <div class="card"><h3>Already there (pre-event)</h3><ul>
+      <li>Web interface in Albanian &amp; English, light/dark</li>
+      <li>Dashboard, source view, CSV preview, report page</li>
+      <li>All figures are <b>mock data</b>, clearly labelled</li>
+      <li>API skeleton: health check, DuckDB connection, AI client stub</li></ul>
+      <span class="tag have">Declared in Annex E</span></div>
+    <div class="card yes"><h3>Built during the hackathon</h3><ul>
+      <li>Real backend: ingest, data model, metrics, copilot</li>
+      <li>Frontend switched from mock data to the backend API</li>
+      <li>Organisers' data package loaded as the first real data</li>
+      <li>Tests and a demo that works end to end</li></ul>
+      <span class="tag build">Core Track D work</span></div>
+  </div>
+  <p class="lead">The prototype shows the screens. The hackathon is about making them run on real data.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kicker">Architecture</div>
+  <h2>How the pieces fit together</h2>
+  <div class="flow">
+    <div class="step">Department exports<small>CSV / XLSX from the data package</small></div><span class="arrow">→</span>
+    <div class="step">Smart Ingest<small>FastAPI · profile · AI mapping · lineage</small><span class="tag build">build</span></div><span class="arrow">→</span>
+    <div class="step">DuckDB warehouse<small>shared data model · metric views</small><span class="tag build">build</span></div>
+  </div>
+  <div class="flow" style="margin-top:2vh">
+    <span class="arrow">→</span>
+    <div class="step">Metrics &amp; Signals<small>KPIs, targets, trend alerts</small><span class="tag build">build</span></div>
+    <div class="step">Copilot<small>question → guarded SQL → answer</small><span class="tag build">build</span></div><span class="arrow">→</span>
+    <div class="step">REST API <code>/api/v1</code><small>OpenAPI docs at /docs</small><span class="tag build">build</span></div><span class="arrow">→</span>
+    <div class="step gold">Web dashboard<small>Next.js · sq / en</small><span class="tag have">exists, rewire</span></div>
+  </div>
+  <div class="legend"><span><span class="tag have">exists</span>prototype, mock data</span><span><span class="tag build">build</span>during the hackathon</span></div>
+  <p class="lead">Stack: Python 3.12 · FastAPI · DuckDB · Claude (Haiku for mapping, Sonnet for questions) · Next.js 16 · TypeScript · ECharts.</p>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">What we build · backend</div>
+  <h2>Five backend modules</h2>
+  <table>
+    <tr><th>Module</th><th>What it does</th><th>Done when</th></tr>
+    <tr><td>Ingest</td><td>Read CSV/XLSX, profile columns, flag personal fields, ask AI for a mapping, apply the confirmed mapping</td><td>A package file loads with every row linked to its source file</td></tr>
+    <tr><td>Data model</td><td>Shared tables: departments, services, requests, locations, budget, targets, sources</td><td>Fitted to the organisers' data package</td></tr>
+    <tr><td>Metrics</td><td>Requests, resolved on time, overdue, budget vs. actual, by department and month</td><td>Numbers match a hand check on sample files</td></tr>
+    <tr><td>Copilot</td><td>Question → SQL → safety check (read-only, one statement, allowed tables, row limit) → answer</td><td>Shows answer, SQL and source; refuses unsafe queries</td></tr>
+    <tr><td>API</td><td>REST endpoints for all of the above, with OpenAPI docs</td><td>Frontend uses only this API, no mock data</td></tr>
+  </table>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">What we build · frontend</div>
+  <h2>From mock screens to a working app</h2>
+  <div class="grid">
+    <div class="card"><h3>Upload &amp; map wizard</h3><p>Upload a file, see each column with a sample value and the AI suggestion, correct it, confirm.</p></div>
+    <div class="card"><h3>Live dashboard</h3><p>KPI cards and charts read from the API, with filters for department and month, and targets shown.</p></div>
+    <div class="card"><h3>Ask box</h3><p>Type a question in Albanian or English; see the answer, a chart, the SQL and the source files.</p></div>
+    <div class="card"><h3>Sources &amp; report</h3><p>List of loaded files with row counts and dates; monthly report built from real figures.</p></div>
+  </div>
+  <p class="lead">Each screen replaces its mock data with an API call. If the AI is unavailable, the screens still work and say so.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">Use of AI</div>
+  <h2>AI where it saves hours, never where it must be exact</h2>
+  <div class="grid">
+    <div class="card"><h3>Column mapping</h3><p>A small model suggests mappings from column names and non-personal samples. A person always confirms.</p></div>
+    <div class="card"><h3>Ask the data</h3><p>Questions become read-only, allow-listed SQL. If the check fails, Sportel says "I can't answer" instead of guessing.</p></div>
+    <div class="card"><h3>Not AI</h3><p>KPIs and trend alerts are plain calculations. If AI is down or over budget, the dashboard and API keep working.</p></div>
+  </div>
+  <p class="lead">AI spend is tracked against the team's USD 25–50 budget. All AI tools we use are declared in Annex E.</p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">Implementation plan</div>
+  <h2>30 hours, checkpoint by checkpoint</h2>
+  <div class="timeline">
+    <div class="phase"><div class="when">Fri evening</div><h3>Foundations</h3><ul>
+      <li>Study the data package</li><li>Fix the shared data model</li><li>CSV/XLSX reading and column profiling</li><li>Agree API contract with frontend</li></ul></div>
+    <div class="phase"><div class="when">Sat morning</div><h3>Core flow</h3><ul>
+      <li>AI mapping + confirm screen</li><li>Load with source lineage</li><li>Metric views and API</li><li>Dashboard switched to API</li><li>Q&amp;A with the municipality</li></ul></div>
+    <div class="phase cp"><div class="when">Sat 15:00 · CP2</div><h3>Core demo</h3><ul>
+      <li>Upload → confirm → see → ask → verify, on real package data</li><li>Copilot with SQL safety check</li></ul></div>
+    <div class="phase cp"><div class="when">Sat 21:00 · CP3</div><h3>Stretch &amp; freeze</h3><ul>
+      <li>Trend and anomaly alerts</li><li>Monthly briefing (sq/en)</li><li>Map, if the data has locations</li><li>Scope frozen</li></ul></div>
+    <div class="phase cp"><div class="when">Sun 11:00 · Submit</div><h3>Polish &amp; ship</h3><ul>
+      <li>Tests and bug fixes</li><li>Deck (max 8 slides)</li><li>Annex E final</li><li>Tagged release + demo link</li></ul></div>
+  </div>
+  <p class="lead" style="font-size:clamp(13px,1.4vw,18px)">If time runs short we cut in this order: map → AI briefing → alerts → XLSX (keep CSV).</p>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kicker">Scope for 30 hours</div>
+  <h2>Must-have, stretch, and not doing</h2>
+  <div class="grid">
+    <div class="card yes"><h3>Must-have · CP2</h3><ul>
+      <li>Upload &amp; map flow</li><li>Shared data model on package data</li><li>KPI dashboard on the API</li><li>Ask box with visible SQL</li></ul></div>
+    <div class="card"><h3>Stretch · CP3</h3><ul>
+      <li>Trend &amp; anomaly alerts</li><li>Monthly AI briefing</li><li>Map view</li><li>OpenAPI polish</li></ul></div>
+    <div class="card no"><h3>Not doing</h3><ul>
+      <li>Logins / accounts</li><li>Live system connectors</li><li>Writing back to municipal systems</li><li>Mobile app</li></ul></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="kicker">Team &amp; quality</div>
+  <h2>Who builds what, and how we check it</h2>
+  <div class="grid">
+    <div class="card"><h3>Data &amp; ingest</h3><p>Data model, file reading, mapping, lineage.</p></div>
+    <div class="card"><h3>AI &amp; copilot</h3><p>Mapping prompts, question-to-SQL, safety check, budget tracking.</p></div>
+    <div class="card"><h3>Frontend</h3><p>Wizard, dashboard, ask box, switching screens to the API.</p></div>
+    <div class="card"><h3>Product &amp; pitch</h3><p>Municipal Q&amp;A, demo script, deck, Annex E.</p></div>
+  </div>
+  <ul style="margin-top:3vh">
+    <li>Automated tests for the SQL safety check, mapping and metrics</li>
+    <li>~20 test questions for the copilot; we report the accuracy honestly</li>
+    <li>One end-to-end browser test of the demo flow, run on every push</li>
+  </ul>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="kicker">Data, trust &amp; next steps</div>
+  <h2>Mock data today, real data next</h2>
+  <div class="grid">
+    <div class="card"><h3>Today</h3><ul>
+      <li>Prototype runs on mock data only</li>
+      <li>CSV previews stay in the browser</li></ul></div>
+    <div class="card yes"><h3>This weekend</h3><ul>
+      <li>Backend with the organisers' data package</li>
+      <li>Only organiser data, no real personal data</li></ul></div>
+    <div class="card"><h3>After the hackathon</h3><ul>
+      <li>4-week pilot with two Elbasan departments</li>
+      <li>Measure onboarding time and data freshness</li>
+      <li>Same model works for any municipality</li></ul></div>
+  </div>
+  <p class="lead">Personal fields are never sent to AI, queries are read-only, and every answer shows its source.</p>
+</section>
+
+<!-- 14 -->
+<section class="slide hero">
+  <div class="logo-card small"><img src="assets/sportel-icon.png" alt="Sportel"></div>
+  <div class="kicker">Sportel · FirmatGroup</div>
+  <h1>Faleminderit.</h1>
+  <p class="lead">Upload, confirm, see, ask, verify. We'd love your feedback: is this the right scope for 30 hours?</p>
+</section>
+
+<div class="foot">
+  <span class="brand"><img src="assets/sportel-icon.png" alt="">Sportel · FirmatGroup</span>
+  <span><button class="nav" id="prev" aria-label="Previous slide">←</button>
+    <span id="count" style="margin:0 10px"></span>
+    <button class="nav" id="next" aria-label="Next slide">→</button></span>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1)) || 1) - 1));
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    document.body.classList.toggle('on-hero', slides[i].classList.contains('hero'));
+    document.getElementById('count').textContent = (i + 1) + ' / ' + slides.length;
+    document.getElementById('bar').style.width = ((i + 1) / slides.length * 100) + '%';
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+    if (e.key === 'f') document.documentElement.requestFullscreen?.();
+  });
+  document.getElementById('prev').onclick = () => show(i - 1);
+  document.getElementById('next').onclick = () => show(i + 1);
+  let x0 = null;
+  document.addEventListener('touchstart', e => x0 = e.touches[0].clientX);
+  document.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+  show(i);
+</script>
+</body>
+</html>
