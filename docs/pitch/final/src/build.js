@@ -94,21 +94,14 @@ async function icon(name, color) {
   // 3 · Solution + demo ---------------------------------------------------
   {
     const s = pres.addSlide(); chrome(s, "Solution · one flow · synthetic demo data", "From “no answer” to proof");
-    const steps = [
-      ["NOT ANSWERABLE", REDBG, RED], ["UPLOAD EXCEL", AMBERBG, AMBER],
-      ["RECONCILED", SOFT, NAVY], ["VERIFIED", GREENBG, GREEN],
-    ];
-    const cw = 2.9, gap = 0.21;
-    steps.forEach(([stamp, bg, fg], i) => {
-      const x = 0.5 + i * (cw + gap);
-      box(s, x, 2.55, cw, 0.55, bg, { line: fg, lw: 1.5, r: 0.27 });
-      T(s, stamp, x, 2.55, cw, 0.55, { fontSize: 18, bold: true, color: fg, align: "center", valign: "middle", charSpacing: 1 });
-      if (i < 3) s.addShape(pres.shapes.RIGHT_ARROW, { x: x + cw + 0.01, y: 2.68, w: 0.19, h: 0.3, fill: { color: GREY }, line: { color: GREY } });
-    });
-    await screen(s, "gap", 0.5, 3.35, 6.02, 3.0, 0.1);
-    await screen(s, "verified", 6.81, 3.35, 6.02, 3.0, 0.1);
-    T(s, "Before: names who owes the data", 0.5, 6.45, 6.02, 0.4, { fontSize: 18, bold: true, color: RED, align: "center" });
-    T(s, "After: verified, with its source rows", 6.81, 6.45, 6.02, 0.4, { fontSize: 18, bold: true, color: GREEN, align: "center" });
+    // The recorded demo (docs/pitch/final/demo/sportel-demo.mp4) plays here on click.
+    const vw = 7.3, vh = vw * 9 / 16, vx = (W - vw) / 2, vy = 2.35;
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: vx - 0.06, y: vy - 0.06, w: vw + 0.12, h: vh + 0.12, fill: { color: WHITE }, rectRadius: 0.08,
+      line: { color: "CBD5E1", width: 1 }, shadow: { type: "outer", color: "1C2B5A", opacity: 0.18, blur: 8, offset: 3, angle: 90 } });
+    // Poster frame; embed-video.ps1 then inserts the MP4 on top through PowerPoint itself
+    // (pptxgenjs video parts are rejected by this PowerPoint build).
+    s.addImage({ path: SCREEN("video-cover"), x: vx, y: vy, w: vw, h: vh, altText: "sportel-demo-video" });
+    T(s, "Click to play · 72 s · live app, synthetic data", 0.5, vy + vh + 0.1, W - 1.0, 0.35, { fontSize: 14, italic: true, color: GREY, align: "center" });
     s.addNotes(N[2]);
   }
 

@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.BASE || "http://localhost:3000";
 const CSV = path.join(__dirname, "mbetjet_jan-gus_2026_SINTETIKE.csv");
 const OUT = path.join(__dirname, "sportel-demo.mp4");
 const FRAMES = path.join(require("os").tmpdir(), "sportel-frames");
@@ -56,7 +56,7 @@ const OVERLAY = () => {
     defaultViewport: { width: 1600, height: 900, deviceScaleFactor: 1.2 },
   });
   const page = await browser.newPage();
-  await page.setCookie({ name: "NEXT_LOCALE", value: "en", domain: "localhost", path: "/" });
+  await page.setCookie({ name: "NEXT_LOCALE", value: "en", domain: new URL(BASE).hostname, path: "/" });
   await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
 
   // Warm up every route (Next dev compiles on first visit) before the camera rolls.
