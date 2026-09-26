@@ -1,0 +1,89 @@
+{
+  "generated_by": "api/scripts/generate_samples.py",
+  "seed": 20260926,
+  "as_of": "2026-08-31",
+  "synthetic": true,
+  "note": {
+    "sq": "Eksporte sintetike departamentesh për demonstrim; jo të dhëna zyrtare.",
+    "en": "Synthetic department exports for demonstration; not official data."
+  },
+  "files": [
+    {
+      "name": "01_SINTETIKE_kerkesat_qytetare_jan-gus_2026.xlsx",
+      "label": {
+        "sq": "Kërkesat qytetare, jan–gus 2026",
+        "en": "Citizen requests, Jan–Aug 2026"
+      },
+      "dataset_hint": "requests",
+      "envelope": null,
+      "preload": true,
+      "synthetic": true
+    },
+    {
+      "name": "02_SINTETIKE_zbatimi_buxhetit_jan-gus_2026.xlsx",
+      "label": {
+        "sq": "Zbatimi i buxhetit, jan–gus 2026",
+        "en": "Budget execution, Jan–Aug 2026"
+      },
+      "dataset_hint": "budget",
+      "envelope": null,
+      "preload": true,
+      "synthetic": true
+    },
+    {
+      "name": "ref_SINTETIKE_popullsia_njesite.csv",
+      "label": {
+        "sq": "Popullsia sipas njësive (referencë)",
+        "en": "Population by administrative unit (reference)"
+      },
+      "dataset_hint": "population",
+      "envelope": null,
+      "preload": true,
+      "synthetic": true
+    },
+    {
+      "name": "zarfi-1_SINTETIKE_pastrimi_mbetjet_2026.csv",
+      "label": {
+        "sq": "Zarfi 1 · Pastrimi dhe mbetjet 2026",
+        "en": "Envelope 1 · Cleaning and waste 2026"
+      },
+      "dataset_hint": "waste",
+      "envelope": 1,
+      "preload": false,
+      "synthetic": true
+    },
+    {
+      "name": "zarfi-2_SINTETIKE_taksat_tarifat_arketimi_2026.xlsx",
+      "label": {
+        "sq": "Zarfi 2 · Taksat dhe tarifat, arkëtimi 2026",
+        "en": "Envelope 2 · Taxes and fees, collection 2026"
+      },
+      "dataset_hint": "revenue",
+      "envelope": 2,
+      "preload": false,
+      "synthetic": true
+    },
+    {
+      "name": "zarfi-3_SINTETIKE_burimet_njerezore_2026.xlsx",
+      "label": {
+        "sq": "Zarfi 3 · Burimet njerëzore 2026",
+        "en": "Envelope 3 · Human resources 2026"
+      },
+      "dataset_hint": "staff",
+      "envelope": 3,
+      "preload": false,
+      "synthetic": true
+    },
+    {
+      "name": "drift_SINTETIKE_pastrimi_mbetjet_2026_v2.csv",
+      "label": {
+        "sq": "Pastrimi dhe mbetjet v2 (format i ndryshuar)",
+        "en": "Cleaning and waste v2 (changed format)"
+      },
+      "dataset_hint": "waste",
+      "envelope": null,
+      "preload": false,
+      "synthetic": true
+    }
+  ]
+}

@@ -1,0 +1,351 @@
+# SMP 2024 Annex A — "Lista e miratuar e treguesve të SMP 2024" (52 indicators).
+#
+# This is a COVERAGE pack, not a computed pack: it states, for each national indicator, how
+# Sportel could reach it today. Names are verbatim from Annex A (Albanian). The mapping is a
+# draft pending the organisers' approval ("approval: pending").
+#
+# base_state:
+#   computable → mapped to a core_kpi passport (reported "computable" only while that passport
+#                is computable; otherwise "missing" with the owner of the missing export)
+#   document   → a publication / plan-exists check, not computed from exports
+#   national   → computed nationally by AMVV from Ministry of Finance data
+#   manual     → a count kept in a register by the responsible unit
+#   missing    → needs sector data nobody has exported to Sportel yet
+# owner: a catalog owner key (app.catalog.OWNERS) or a key of `owners` below (role-based
+#        placeholders; replace with the units confirmed at the municipal desk).
+pack: al_smp
+version: "0.1.0"
+source: "SMP 2024, Aneksi A — Lista e miratuar e treguesve të SMP 2024"
+label:
+  sq: "SMP 2024 — Aneksi A: 52 treguesit kombëtarë"
+  en: "SMP 2024 — Annex A: the 52 national indicators"
+approval: pending
+
+owners:
+  education:
+    sq: "Struktura përgjegjëse për arsimin parauniversitar"
+    en: "Unit responsible for pre-university education"
+  agriculture:
+    sq: "Struktura përgjegjëse për bujqësinë dhe ujitjen"
+    en: "Unit responsible for agriculture and irrigation"
+  forests:
+    sq: "Struktura përgjegjëse për pyjet dhe kullotat"
+    en: "Unit responsible for forests and pastures"
+  fire:
+    sq: "Shërbimi i Mbrojtjes nga Zjarri dhe i Shpëtimit"
+    en: "Fire Protection and Rescue Service"
+  social:
+    sq: "Struktura përgjegjëse për shërbimet sociale"
+    en: "Unit responsible for social services"
+  housing:
+    sq: "Struktura përgjegjëse për strehimin social"
+    en: "Unit responsible for social housing"
+  council:
+    sq: "Sekretaria e Këshillit Bashkiak"
+    en: "Municipal Council secretariat"
+  consultation:
+    sq: "Koordinatori për njoftimin dhe konsultimin publik"
+    en: "Public notification and consultation coordinator"
+  integrity:
+    sq: "Koordinatori për integritetin"
+    en: "Integrity coordinator"
+  european:
+    sq: "Struktura përgjegjëse për integrimin evropian dhe projektet"
+    en: "Unit responsible for European integration and projects"
+  diaspora:
+    sq: "Struktura përgjegjëse për migracionin dhe diasporën"
+    en: "Unit responsible for migration and diaspora"
+  gender:
+    sq: "Punonjësi për barazinë gjinore"
+    en: "Gender equality officer"
+
+notes:
+  document:
+    sq: "Kontroll dokumenti: a është miratuar ose publikuar? Nuk llogaritet nga eksportet."
+    en: "Document check: has it been approved or published? Not computed from exports."
+  national:
+    sq: "Burimi: Ministria e Financave, llogaritur nga AMVV"
+    en: "Source: Ministry of Finance, computed by AMVV"
+  manual:
+    sq: "Vlerë manuale: numërohet nga regjistri i strukturës përgjegjëse, jo nga një eksport."
+    en: "Manual value: counted from the responsible unit's register, not from an export."
+  missing:
+    sq: "Kërkon të dhëna sektoriale nga struktura përgjegjëse."
+    en: "Needs sector data from the responsible unit."
+
+areas:
+  - key: education
+    name: {sq: "Arsimi", en: "Education"}
+    items:
+      - number: 1
+        name_sq: "Shkalla e regjistrimit në çerdhe"
+        base_state: missing
+        owner: education
+        note:
+          sq: "Kërkon regjistrimet në çerdhe dhe numrin e fëmijëve në moshë (vetëm agregate)."
+          en: "Needs nursery enrolments and the number of children of that age (aggregates only)."
+      - number: 2
+        name_sq: "Shkalla e regjistrimit në kopshte publike dhe private"
+        base_state: missing
+        owner: education
+        note:
+          sq: "Kërkon regjistrimet në kopshte publike dhe private dhe popullsinë në moshë."
+          en: "Needs public and private kindergarten enrolments and the population of that age."
+      - number: 3
+        name_sq: "Numri i infrastrukturës arsimore parauniversitare sipas nivelit arsimor"
+        base_state: missing
+        owner: education
+        note:
+          sq: "Kërkon regjistrin e objekteve arsimore sipas nivelit."
+          en: "Needs the register of education buildings by level."
+      - number: 4
+        name_sq: "Raporti fëmijë-mësues në kopshte publike dhe private"
+        base_state: missing
+        owner: education
+      - number: 5
+        name_sq: "Plan Vendor të Arsimit Parauniversitar"
+        base_state: document
+        owner: education
+
+  - key: agriculture
+    name: {sq: "Bujqësia", en: "Agriculture"}
+    items:
+      - number: 6
+        name_sq: "Tokë bujqësore e pajisur me kanale ujitje/kullimi"
+        base_state: missing
+        owner: agriculture
+      - number: 7
+        name_sq: "Përqindja e kanaleve funksionale të ujitjes dhe kullimit"
+        base_state: missing
+        owner: agriculture
+
+  - key: forests
+    name: {sq: "Pyje dhe kullota", en: "Forests and pastures"}
+    items:
+      - number: 8
+        name_sq: "Shkalla e pajisjes me plane mbarështimi"
+        base_state: missing
+        owner: forests
+      - number: 9
+        name_sq: "Punonjës për 1'000 hektarë"
+        base_state: missing
+        owner: forests
+        note:
+          sq: "Kërkon sipërfaqen e pyjeve dhe kullotave (ha) dhe punonjësit e shërbimit pyjor."
+          en: "Needs the forest and pasture area (ha) and the forestry service staff."
+
+  - key: fire
+    name: {sq: "Mbrojtja nga zjarri", en: "Fire protection"}
+    items:
+      - number: 10
+        name_sq: "Zjarrëfikës për 1'500 banorë"
+        base_state: missing
+        owner: fire
+        note:
+          sq: "Emëruesi (popullsia) vjen nga tabela e popullsisë; mungon numri i zjarrfikësve."
+          en: "The denominator (population) comes from the population table; the number of firefighters is missing."
+      - number: 11
+        name_sq: "Automjete zjarrëfikëse për 10'000 banorë"
+        base_state: missing
+        owner: fire
+        note:
+          sq: "Emëruesi (popullsia) vjen nga tabela e popullsisë; mungon numri i automjeteve."
+          en: "The denominator (population) comes from the population table; the number of fire engines is missing."
+
+  - key: waste
+    name: {sq: "Menaxhimi i mbetjeve", en: "Waste management"}
+    items:
+      - number: 12
+        name_sq: "Mbulimi i popullsisë me shërbimin e menaxhimit të mbetjeve në zonat urbane/rurale"
+        base_state: missing
+        owner: public_services
+        note:
+          sq: "Eksporti i mbetjeve ka kolonën «Familje të mbuluara»; mungon numri total i familjeve sipas njësisë administrative."
+          en: "The waste export has a “Households served” column; the total number of households per administrative unit is missing."
+      - number: 13
+        name_sq: "Mbulimi kostos së menaxhimit të mbetjeve nga tarifa e shërbimit"
+        base_state: computable
+        passport_code: REV-02
+        note:
+          sq: "Llogaritet nga pasaporta REV-02: tarifa e pastrimit e arkëtuar ÷ shpenzimet e programit 05100."
+          en: "Computed by passport REV-02: cleaning fee collected ÷ spending of programme 05100."
+      - number: 14
+        name_sq: "Mbetjet e gjeneruara si kg/banorë"
+        base_state: computable
+        passport_code: WST-02
+        note:
+          sq: "Llogaritet nga pasaporta WST-02 (mbetjet e grumbulluara si përafrim i të gjeneruarave), me bazën e zgjedhur të popullsisë."
+          en: "Computed by passport WST-02 (waste collected as a proxy for waste generated), on the pinned population basis."
+      - number: 15
+        name_sq: "Kosto për ton/lekë"
+        base_state: computable
+        passport_code: WST-03
+        note:
+          sq: "Llogaritet nga pasaporta WST-03: shpenzimet e programit 05100 ÷ tonët e grumbulluar."
+          en: "Computed by passport WST-03: spending of programme 05100 ÷ tonnes collected."
+      - number: 16
+        name_sq: "Plan Vendor të Menaxhimit të Mbetjeve"
+        base_state: document
+        owner: public_services
+
+  - key: social
+    name: {sq: "Shërbimet sociale", en: "Social services"}
+    items:
+      - number: 17
+        name_sq: "Përqindja e familjeve që marrin ndihmë ekonomike"
+        base_state: missing
+        owner: social
+      - number: 18
+        name_sq: "Shkalla e miratimit të strehimit social"
+        base_state: missing
+        owner: housing
+      - number: 19
+        name_sq: "Numri i rasteve të trajtuara kundrejt rasteve të raportuara të dhunës në familje (sipas gjinisë, moshës dhe llojit të dhunës)"
+        base_state: missing
+        owner: social
+        note:
+          sq: "Vetëm numra agregatë sipas gjinisë, moshës dhe llojit; asnjë e dhënë personale nuk hyn në Sportel."
+          en: "Aggregate counts by gender, age and type only; no personal data enters Sportel."
+      - number: 20
+        name_sq: "Përqindja e personave me aftësi të kufizuar, të referuar nga komisionet bio-psiko-sociale që marrin mbështetje sociale"
+        base_state: missing
+        owner: social
+      - number: 21
+        name_sq: "Numri i qendrave sociale komunitare për 10'000 banorë"
+        base_state: missing
+        owner: social
+        note:
+          sq: "Emëruesi (popullsia) vjen nga tabela e popullsisë; mungon numri i qendrave."
+          en: "The denominator (population) comes from the population table; the number of centres is missing."
+      - number: 22
+        name_sq: "Plan Vendor Social"
+        base_state: document
+        owner: social
+
+  - key: hr
+    name: {sq: "Burimet njerëzore", en: "Human resources"}
+    items:
+      - number: 23
+        name_sq: "Shkalla e rotacionit të punonjësve të bashkisë"
+        base_state: computable
+        passport_code: HR-02
+        note:
+          sq: "Llogaritet nga pasaporta HR-02: largimet ÷ numri mesatar i punonjësve."
+          en: "Computed by passport HR-02: leavers ÷ average headcount."
+      - number: 24
+        name_sq: "Përqindja e stafit të punësuar nga bashkia të trajnuar"
+        base_state: missing
+        owner: hr
+        note:
+          sq: "Eksporti i burimeve njerëzore nuk ka ende një kolonë për stafin e trajnuar."
+          en: "The HR export does not yet have a column for trained staff."
+      - number: 25
+        name_sq: "Punonjës për 1'000 banorë"
+        base_state: computable
+        passport_code: HR-01
+        note:
+          sq: "Llogaritet nga pasaporta HR-01, me bazën e zgjedhur të popullsisë."
+          en: "Computed by passport HR-01, on the pinned population basis."
+
+  - key: governance
+    name: {sq: "Mirëqeverisja", en: "Good governance"}
+    items:
+      - number: 26
+        name_sq: "Publikimi i vendimeve të Këshillit Bashkiak"
+        base_state: document
+        owner: council
+      - number: 27
+        name_sq: "Publikimi i Planit Buxhetor Afatmesëm PBA 2024-2026"
+        base_state: document
+        owner: finance
+      - number: 28
+        name_sq: "Publikimi i Paketës Fiskale 2024"
+        base_state: document
+        owner: local_revenue
+      - number: 29
+        name_sq: "Akte për të cilët është i detyrueshëm zhvillimi i konsultimit publik"
+        base_state: manual
+        owner: consultation
+      - number: 30
+        name_sq: "Raporti vjetor për transparencën në procesin e vendimmarrjes"
+        base_state: document
+        owner: consultation
+      - number: 31
+        name_sq: "Plan Vendor i Integritetit"
+        base_state: document
+        owner: integrity
+
+  - key: european
+    name: {sq: "Integrimi evropian", en: "European integration"}
+    items:
+      - number: 32
+        name_sq: "Numri i marrëveshjeve ndërbashkiake të nënshkruara nga secila bashki"
+        base_state: manual
+        owner: european
+      - number: 33
+        name_sq: "Strukturat e Performancës referuar Manualeve Orientuese të AMVV"
+        base_state: manual
+        owner: statistics
+      - number: 34
+        name_sq: "Projekte të fituara kundrejt të aplikuara nga Bashkimi Evropian (periudha 2-vjeçare 2023-2024)"
+        base_state: missing
+        owner: european
+        note:
+          sq: "Kërkon regjistrin e aplikimeve dhe projekteve të fituara 2023–2024."
+          en: "Needs the register of applications and projects won in 2023–2024."
+      - number: 35
+        name_sq: "Planet e Migracionit dhe Diasporës"
+        base_state: document
+        owner: diaspora
+      - number: 36
+        name_sq: "Komisionet e Integrimit Evropian pranë Këshillave Bashkiakë"
+        base_state: manual
+        owner: council
+
+  - key: gender
+    name: {sq: "Barazia gjinore", en: "Gender equality"}
+    items:
+      - number: 37
+        name_sq: "Përqindja e grave në pozicione: kryetar, zëvendëskryetar, këshilla bashkiakë dhe administratorë"
+        base_state: manual
+        owner: gender
+      - number: 38
+        name_sq: "Përqindja e grave në pozicione drejtuese të ndryshme (të lartë, të mesme, të ulët) në bashki"
+        base_state: manual
+        owner: hr
+        note:
+          sq: "Vlerë manuale sot; mund të llogaritet nga eksporti i burimeve njerëzore nëse përfshin gjininë dhe nivelin drejtues (vetëm agregate)."
+          en: "Manual today; could be computed from the HR export if it includes gender and management level (aggregates only)."
+      - number: 39
+        name_sq: "Përqindja e buxhetit vendor të alokuar për nisma që mbështesin barazinë gjinore në secilin program buxhetor vendor"
+        base_state: manual
+        owner: finance
+        note:
+          sq: "Vlerë manuale: kërkon etiketimin gjinor të linjave buxhetore; eksporti i buxhetit nuk e ka këtë kolonë."
+          en: "Manual value: needs gender tagging of budget lines; the budget export has no such column."
+      - number: 40
+        name_sq: "Plan Veprimi i Barazisë Gjinore"
+        base_state: document
+        owner: gender
+
+  - key: finance
+    name: {sq: "Financa", en: "Finance"}
+    items:
+      - {number: 41, name_sq: "Të ardhurat e veta për frymë në lekë", base_state: national}
+      - {number: 42, name_sq: "Të ardhurat e veta përkundrejt transfertave", base_state: national}
+      - {number: 43, name_sq: "Raporti i të ardhurave të veta ndaj buxhetit", base_state: national}
+      - {number: 44, name_sq: "Shkalla e përdorimit të të ardhurave", base_state: national}
+      - {number: 45, name_sq: "Të ardhurat nga taksa e pasurisë në raport me të ardhurat vendore", base_state: national}
+      - {number: 46, name_sq: "Buxheti për frymë (në lekë)", base_state: national}
+      - number: 47
+        name_sq: "Shkalla e ekzekutimit të buxhetit: fakt përkundrejt plan"
+        base_state: national
+        passport_code: FIN-01
+        note:
+          sq: "Burimi: Ministria e Financave, llogaritur nga AMVV · Pamje e brendshme në Sportel: FIN-01."
+          en: "Source: Ministry of Finance, computed by AMVV · Internal view in Sportel: FIN-01."
+      - {number: 48, name_sq: "Investime për frymë (në lekë)", base_state: national}
+      - {number: 49, name_sq: "Pesha e detyrimeve financiare të papaguara ndaj të tretëve (%)", base_state: national}
+      - {number: 50, name_sq: "Pesha e investimeve në buxhet", base_state: national}
+      - {number: 51, name_sq: "Pesha e personelit në buxhet", base_state: national}
+      - {number: 52, name_sq: "Pesha e shpenzimeve operacionale në buxhet", base_state: national}

@@ -1,0 +1,905 @@
+# Sportel core KPI pack — 13 indicator passports (contract §3).
+#
+# Conventions
+# - Every formula is our reading of public definitions: formula_status "draft" (awaiting
+#   validation by the municipality / AMVV) until validated.
+# - "period" is the latest month present in the data (e.g. "2026-08"). Values are year-to-date
+#   (1 January to the end of the latest month) unless the indicator is a stock (REQ-03 open
+#   overdue at the latest date; HR-01/HR-02 at the latest headcount date).
+# - value_sql returns one row (value, period); series_sql returns (period, value) by month;
+#   lineage_sql returns (source_id, row_no) of every contributing row; optional breakdown_sql
+#   returns (period, dimension, value) for unit-level plausibility checks.
+# - Per-capita passports use the named parameter $basis (population.basis:
+#   census_2023 | civil_registry), taken from the definition pin "population_basis".
+# - Answer templates: {value} and {target} are formatted by code (percent values carry "%"),
+#   {period} is a month label ("gusht 2026" / "August 2026"), {basis} the basis label.
+pack: core_kpi
+version: "0.1.0"
+label: {sq: "Treguesit kryesorë të performancës", en: "Core performance indicators"}
+passports:
+
+  # ---------------------------------------------------------------- requests
+  - code: REQ-01
+    version: "0.1.0"
+    area: requests
+    name: {sq: "Kërkesa të pranuara", en: "Requests received"}
+    question:
+      sq: "Sa kërkesa qytetare janë pranuar këtë vit?"
+      en: "How many citizen requests have been received this year?"
+    aliases:
+      sq:
+        - "Sa kërkesa kemi marrë nga qytetarët?"
+        - "Numri i kërkesave qytetare"
+        - "Sa kërkesa dhe ankesa janë regjistruar deri tani?"
+        - "Kërkesa të regjistruara këtë vit"
+      en:
+        - "How many requests did citizens submit?"
+        - "Number of citizen requests"
+        - "Total requests registered so far this year"
+        - "Citizen requests received year to date"
+    formula:
+      sq: "Numri i kërkesave të regjistruara nga 1 janari deri në fund të muajit të fundit me të dhëna."
+      en: "Number of requests registered from 1 January to the end of the latest month with data."
+    formula_status: draft
+    unit: count
+    unit_label: {sq: "kërkesa", en: "requests"}
+    direction: none
+    target: null
+    required_datasets: [requests]
+    owner: citizen_relations
+    smp_ref: null
+    checks: [swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period} janë regjistruar {value} kërkesa qytetare."
+      en: "From January to {period}, {value} citizen requests were registered."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT
+        (SELECT count(*) FROM request r WHERE r.created_at BETWEEN w.y0 AND w.m1)::DOUBLE AS value,
+        strftime(w.m1, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT strftime(date_trunc('month', r.created_at), '%Y-%m') AS period,
+             count(*)::DOUBLE AS value
+      FROM request r, w
+      WHERE r.created_at BETWEEN w.y0 AND w.m1
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT r.source_id, r.row_no
+      FROM request r, w
+      WHERE r.created_at BETWEEN w.y0 AND w.m1
+
+  - code: REQ-02
+    version: "0.1.0"
+    area: requests
+    name: {sq: "Zgjidhur brenda afatit", en: "Resolved within the deadline"}
+    question:
+      sq: "Sa përqind e kërkesave zgjidhen brenda afatit?"
+      en: "What share of requests is resolved within the deadline?"
+    aliases:
+      sq:
+        - "Përqindja e kërkesave të zgjidhura në kohë"
+        - "A i zgjidhim kërkesat brenda afatit?"
+        - "Sa kërkesa u mbyllën brenda afatit ligjor?"
+        - "Shkalla e zgjidhjes në afat"
+      en:
+        - "On-time resolution rate"
+        - "Are requests closed within the deadline?"
+        - "Percentage of requests resolved on time"
+        - "How many requests were resolved within their deadline?"
+    formula:
+      sq: "Kërkesat e mbyllura brenda afatit (ditët nga regjistrimi te mbyllja ≤ afati në ditë) ÷ të gjitha kërkesat e mbyllura në periudhë × 100."
+      en: "Requests closed within their deadline (days from registration to closing ≤ deadline in days) ÷ all requests closed in the period × 100."
+    formula_status: draft
+    unit: percent
+    direction: higher_better
+    target: 90
+    required_datasets: [requests]
+    owner: citizen_relations
+    smp_ref: null
+    checks: [rate_bounds, off_target, swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, {value} e kërkesave të mbyllura u zgjidhën brenda afatit (objektivi: {target})."
+      en: "From January to {period}, {value} of closed requests were resolved within the deadline (target: {target})."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      ), c AS (
+        SELECT r.created_at, r.closed_at, r.sla_days
+        FROM request r, w
+        WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.sla_days IS NOT NULL
+      )
+      SELECT
+        100.0 * count(*) FILTER (WHERE datediff('day', c.created_at, c.closed_at) <= c.sla_days)
+          / nullif(count(*), 0) AS value,
+        (SELECT strftime(m1, '%Y-%m') FROM w) AS period
+      FROM c
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT strftime(date_trunc('month', r.closed_at), '%Y-%m') AS period,
+             100.0 * count(*) FILTER (WHERE datediff('day', r.created_at, r.closed_at) <= r.sla_days)
+               / nullif(count(*), 0) AS value
+      FROM request r, w
+      WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.sla_days IS NOT NULL
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT r.source_id, r.row_no
+      FROM request r, w
+      WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.sla_days IS NOT NULL
+    breakdown_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT strftime(date_trunc('month', r.closed_at), '%Y-%m') AS period,
+             coalesce(r.department, '—') AS dimension,
+             100.0 * count(*) FILTER (WHERE datediff('day', r.created_at, r.closed_at) <= r.sla_days)
+               / nullif(count(*), 0) AS value
+      FROM request r, w
+      WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.sla_days IS NOT NULL
+      GROUP BY 1, 2
+      ORDER BY 1, 2
+
+  - code: REQ-03
+    version: "0.1.0"
+    area: requests
+    name: {sq: "Kërkesa të hapura me afat të kaluar", en: "Open requests past their deadline"}
+    question:
+      sq: "Sa kërkesa të hapura e kanë kaluar afatin?"
+      en: "How many open requests are past their deadline?"
+    aliases:
+      sq:
+        - "Sa kërkesa janë vonuar?"
+        - "Kërkesat e pazgjidhura jashtë afatit"
+        - "Sa kërkesa presin përtej afatit ligjor?"
+        - "Numri i kërkesave të vonuara"
+      en:
+        - "How many requests are overdue?"
+        - "Open requests past the deadline"
+        - "Backlog of overdue requests"
+        - "How many unresolved requests are late?"
+    formula:
+      sq: "Kërkesat pa datë mbylljeje në fund të muajit të fundit (përjashtuar të refuzuarat), për të cilat ditët nga regjistrimi janë më shumë se afati."
+      en: "Requests without a closing date at the end of the latest month (excluding rejected ones) whose days since registration exceed their deadline."
+    formula_status: draft
+    unit: count
+    unit_label: {sq: "kërkesa", en: "requests"}
+    direction: lower_better
+    target: null
+    required_datasets: [requests]
+    owner: citizen_relations
+    smp_ref: null
+    checks: [swing, parts_vs_total]
+    answer:
+      sq: "Deri në fund të muajit {period}, {value} kërkesa të hapura e kishin kaluar afatin."
+      en: "At the end of {period}, {value} open requests were past their deadline."
+    value_sql: |
+      WITH w AS (SELECT last_day(max(created_at)) AS asof FROM request)
+      SELECT
+        (SELECT count(*) FROM request r
+         WHERE r.created_at <= w.asof
+           AND (r.closed_at IS NULL OR r.closed_at > w.asof)
+           AND r.sla_days IS NOT NULL
+           AND datediff('day', r.created_at, w.asof) > r.sla_days
+           AND coalesce(lower(strip_accents(r.status)), '') NOT LIKE '%refuz%')::DOUBLE AS value,
+        strftime(w.asof, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      ), months AS (
+        SELECT DISTINCT last_day(r.created_at) AS me
+        FROM request r, w
+        WHERE r.created_at BETWEEN w.y0 AND w.m1
+      )
+      SELECT strftime(months.me, '%Y-%m') AS period,
+        (SELECT count(*) FROM request r
+         WHERE r.created_at <= months.me
+           AND (r.closed_at IS NULL OR r.closed_at > months.me)
+           AND r.sla_days IS NOT NULL
+           AND datediff('day', r.created_at, months.me) > r.sla_days
+           AND coalesce(lower(strip_accents(r.status)), '') NOT LIKE '%refuz%')::DOUBLE AS value
+      FROM months
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (SELECT last_day(max(created_at)) AS asof FROM request)
+      SELECT r.source_id, r.row_no
+      FROM request r, w
+      WHERE r.created_at <= w.asof
+        AND (r.closed_at IS NULL OR r.closed_at > w.asof)
+        AND r.sla_days IS NOT NULL
+        AND datediff('day', r.created_at, w.asof) > r.sla_days
+        AND coalesce(lower(strip_accents(r.status)), '') NOT LIKE '%refuz%'
+
+  - code: REQ-04
+    version: "0.1.0"
+    area: requests
+    name: {sq: "Koha mesatare e zgjidhjes", en: "Average resolution time"}
+    question:
+      sq: "Sa ditë duhen mesatarisht për të zgjidhur një kërkesë?"
+      en: "How many days does it take on average to resolve a request?"
+    aliases:
+      sq:
+        - "Koha mesatare e mbylljes së kërkesave"
+        - "Sa shpejt zgjidhen kërkesat?"
+        - "Mesatarja e ditëve deri në zgjidhje"
+        - "Sa zgjat zgjidhja e një kërkese?"
+      en:
+        - "Average time to resolve a request"
+        - "How fast are requests resolved?"
+        - "Mean days to close a request"
+        - "How long does it take to close a citizen request?"
+    formula:
+      sq: "Mesatarja e ditëve nga regjistrimi te mbyllja, për kërkesat e mbyllura nga 1 janari deri në fund të muajit të fundit."
+      en: "Average days from registration to closing, for requests closed from 1 January to the end of the latest month."
+    formula_status: draft
+    unit: days
+    direction: lower_better
+    target: 10
+    required_datasets: [requests]
+    owner: citizen_relations
+    smp_ref: null
+    checks: [off_target, swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, një kërkesë u zgjidh mesatarisht për {value} ditë (objektivi: jo më shumë se {target} ditë)."
+      en: "From January to {period}, a request took on average {value} days to resolve (target: at most {target} days)."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT
+        (SELECT avg(datediff('day', r.created_at, r.closed_at)) FROM request r
+         WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.closed_at >= r.created_at) AS value,
+        strftime(w.m1, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT strftime(date_trunc('month', r.closed_at), '%Y-%m') AS period,
+             avg(datediff('day', r.created_at, r.closed_at)) AS value
+      FROM request r, w
+      WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.closed_at >= r.created_at
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(created_at))::DATE AS y0, last_day(max(created_at)) AS m1
+        FROM request
+      )
+      SELECT r.source_id, r.row_no
+      FROM request r, w
+      WHERE r.closed_at BETWEEN w.y0 AND w.m1 AND r.closed_at >= r.created_at
+
+  # ---------------------------------------------------------------- finance
+  - code: FIN-01
+    version: "0.1.0"
+    area: finance
+    name:
+      sq: "Zbatimi i buxhetit (fakt/plan) — pamje e brendshme"
+      en: "Budget execution (actual/plan) — internal view"
+    question:
+      sq: "Sa është zbatuar buxheti deri tani?"
+      en: "How much of the budget has been executed so far?"
+    aliases:
+      sq:
+        - "Realizimi i buxhetit"
+        - "Shpenzimet faktike kundrejt planit"
+        - "Sa kemi shpenzuar nga plani i buxhetit?"
+        - "Përqindja e zbatimit të buxhetit"
+      en:
+        - "Budget execution rate"
+        - "Actual versus planned spending"
+        - "How much of the planned budget have we spent?"
+        - "Budget implementation percentage"
+    formula:
+      sq: "Shpenzimet faktike ÷ shpenzimet e planifikuara të periudhës (të gjitha programet, korrente dhe kapitale, janar – muaji i fundit) × 100."
+      en: "Actual spending ÷ planned spending for the period (all programmes, current and capital, January to the latest month) × 100."
+    formula_status: draft
+    unit: percent
+    direction: higher_better
+    target: 90
+    required_datasets: [budget]
+    owner: finance
+    smp_ref: "SMP-AL 2024 #47"
+    smp_note:
+      sq: "Pamje e brendshme e treguesit #47; vlera zyrtare llogaritet nga AMVV."
+      en: "Internal view of indicator #47; the official value is computed by AMVV."
+    checks: [rate_bounds, off_target, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, buxheti është zbatuar {value} kundrejt planit të periudhës (objektivi: {target})."
+      en: "From January to {period}, the budget was executed at {value} of the period plan (target: {target})."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM budget_line
+      )
+      SELECT
+        100.0 * (SELECT sum(b.actual_lek) FROM budget_line b WHERE b.month BETWEEN w.y0 AND w.m)
+          / nullif((SELECT sum(b.planned_lek) FROM budget_line b WHERE b.month BETWEEN w.y0 AND w.m), 0)
+          AS value,
+        strftime(w.m, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM budget_line
+      ), mm AS (
+        SELECT b.month AS mon, sum(b.planned_lek) AS p, sum(b.actual_lek) AS a
+        FROM budget_line b, w
+        WHERE b.month BETWEEN w.y0 AND w.m
+        GROUP BY b.month
+      )
+      SELECT strftime(mon, '%Y-%m') AS period,
+             100.0 * sum(a) OVER (ORDER BY mon) / nullif(sum(p) OVER (ORDER BY mon), 0) AS value
+      FROM mm
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM budget_line
+      )
+      SELECT b.source_id, b.row_no
+      FROM budget_line b, w
+      WHERE b.month BETWEEN w.y0 AND w.m
+
+  - code: FIN-02
+    version: "0.1.0"
+    area: finance
+    name: {sq: "Zbatimi i investimeve (kapitale)", en: "Capital investment execution"}
+    question:
+      sq: "Sa janë zbatuar investimet kapitale?"
+      en: "How much of the capital investment plan has been executed?"
+    aliases:
+      sq:
+        - "Realizimi i shpenzimeve kapitale"
+        - "Sa kemi investuar kundrejt planit?"
+        - "Zbatimi i buxhetit të investimeve"
+        - "Përqindja e realizimit të investimeve"
+      en:
+        - "Capital spending execution rate"
+        - "How much have we invested against the plan?"
+        - "Investment budget execution"
+        - "Capital budget implementation"
+    formula:
+      sq: "Shpenzimet faktike kapitale ÷ shpenzimet kapitale të planifikuara të periudhës (janar – muaji i fundit) × 100."
+      en: "Actual capital spending ÷ planned capital spending for the period (January to the latest month) × 100."
+    formula_status: draft
+    unit: percent
+    direction: higher_better
+    target: 70
+    required_datasets: [budget]
+    owner: finance
+    smp_ref: null
+    checks: [rate_bounds, off_target, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, shpenzimet kapitale janë zbatuar {value} kundrejt planit të periudhës (objektivi: {target})."
+      en: "From January to {period}, capital spending was executed at {value} of the period plan (target: {target})."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM budget_line
+      )
+      SELECT
+        100.0 * (SELECT sum(b.actual_lek) FROM budget_line b
+                 WHERE b.line_type = 'capital' AND b.month BETWEEN w.y0 AND w.m)
+          / nullif((SELECT sum(b.planned_lek) FROM budget_line b
+                    WHERE b.line_type = 'capital' AND b.month BETWEEN w.y0 AND w.m), 0) AS value,
+        strftime(w.m, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM budget_line
+      ), mm AS (
+        SELECT b.month AS mon, sum(b.planned_lek) AS p, sum(b.actual_lek) AS a
+        FROM budget_line b, w
+        WHERE b.line_type = 'capital' AND b.month BETWEEN w.y0 AND w.m
+        GROUP BY b.month
+      )
+      SELECT strftime(mon, '%Y-%m') AS period,
+             100.0 * sum(a) OVER (ORDER BY mon) / nullif(sum(p) OVER (ORDER BY mon), 0) AS value
+      FROM mm
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM budget_line
+      )
+      SELECT b.source_id, b.row_no
+      FROM budget_line b, w
+      WHERE b.line_type = 'capital' AND b.month BETWEEN w.y0 AND w.m
+
+  # ---------------------------------------------------------------- waste
+  - code: WST-01
+    version: "0.1.0"
+    area: waste
+    name: {sq: "Mbetje të grumbulluara", en: "Waste collected"}
+    question:
+      sq: "Sa ton mbetje janë grumbulluar këtë vit?"
+      en: "How many tonnes of waste have been collected this year?"
+    aliases:
+      sq:
+        - "Sasia e mbetjeve të grumbulluara"
+        - "Sa mbetje kemi mbledhur deri tani?"
+        - "Tonelatat e mbetjeve këtë vit"
+        - "Sa mbeturina u grumbulluan?"
+      en:
+        - "Amount of waste collected"
+        - "How much waste have we collected so far?"
+        - "Tonnes of waste collected this year"
+        - "Total garbage collected year to date"
+    formula:
+      sq: "Shuma e sasisë së mbetjeve të grumbulluara (ton), të gjitha njësitë administrative, nga 1 janari deri në fund të muajit të fundit."
+      en: "Sum of waste collected (tonnes), all administrative units, from 1 January to the end of the latest month."
+    formula_status: draft
+    unit: count
+    unit_label: {sq: "ton", en: "tonnes"}
+    direction: none
+    target: null
+    required_datasets: [waste]
+    owner: public_services
+    smp_ref: null
+    checks: [placeholder_value, swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period} janë grumbulluar {value} ton mbetje."
+      en: "From January to {period}, {value} tonnes of waste were collected."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      )
+      SELECT
+        (SELECT sum(x.tonnes) FROM waste_collection x WHERE x.month BETWEEN w.y0 AND w.m) AS value,
+        strftime(w.m, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      )
+      SELECT strftime(x.month, '%Y-%m') AS period, sum(x.tonnes) AS value
+      FROM waste_collection x, w
+      WHERE x.month BETWEEN w.y0 AND w.m
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      )
+      SELECT x.source_id, x.row_no
+      FROM waste_collection x, w
+      WHERE x.month BETWEEN w.y0 AND w.m
+    breakdown_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      )
+      SELECT strftime(x.month, '%Y-%m') AS period, x.admin_unit AS dimension, sum(x.tonnes) AS value
+      FROM waste_collection x, w
+      WHERE x.month BETWEEN w.y0 AND w.m
+      GROUP BY 1, 2
+      ORDER BY 1, 2
+
+  - code: WST-02
+    version: "0.1.0"
+    area: waste
+    name: {sq: "Mbetje për banor (kg/banor/vit)", en: "Waste per resident (kg/resident/year)"}
+    question:
+      sq: "Sa kg mbetje prodhon një banor në vit?"
+      en: "How many kilograms of waste per resident per year?"
+    aliases:
+      sq:
+        - "Mbetjet për frymë"
+        - "Sa mbetje për banor grumbullohen?"
+        - "Kilogramë mbetje për banor në vit"
+        - "Sasia e mbetjeve për çdo banor"
+      en:
+        - "Waste per capita"
+        - "How much waste is collected per resident?"
+        - "Kilograms of waste per inhabitant per year"
+        - "Annual waste per person"
+    formula:
+      sq: "Tonët e grumbulluar × 1.000 ÷ banorët (sipas bazës së zgjedhur të popullsisë), të përvitësuar: × 12 ÷ numri i muajve me të dhëna."
+      en: "Tonnes collected × 1,000 ÷ residents (pinned population basis), annualised: × 12 ÷ number of months with data."
+    formula_status: draft
+    unit: kg_per_resident
+    direction: none
+    target: null
+    required_datasets: [waste, population]
+    owner: public_services
+    smp_ref: "SMP-AL 2024 #14"
+    checks: [placeholder_value, swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, mbetjet e grumbulluara janë {value} kg për banor në vit (të përvitësuara; baza e popullsisë: {basis})."
+      en: "From January to {period}, waste collected amounts to {value} kg per resident per year (annualised; population basis: {basis})."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      ), t AS (
+        SELECT sum(x.tonnes) AS tonnes, count(DISTINCT x.month) AS months
+        FROM waste_collection x, w
+        WHERE x.month BETWEEN w.y0 AND w.m
+      ), p AS (
+        SELECT sum(residents) AS residents FROM population WHERE basis = $basis
+      )
+      SELECT t.tonnes * 1000.0 / nullif(p.residents, 0) * 12.0 / nullif(t.months, 0) AS value,
+             (SELECT strftime(m, '%Y-%m') FROM w) AS period
+      FROM t, p
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      ), p AS (
+        SELECT sum(residents) AS residents FROM population WHERE basis = $basis
+      )
+      SELECT strftime(x.month, '%Y-%m') AS period,
+             sum(x.tonnes) * 1000.0 * 12.0 / nullif(any_value(p.residents), 0) AS value
+      FROM waste_collection x, w, p
+      WHERE x.month BETWEEN w.y0 AND w.m
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM waste_collection
+      )
+      SELECT x.source_id, x.row_no
+      FROM waste_collection x, w
+      WHERE x.month BETWEEN w.y0 AND w.m
+      UNION ALL
+      SELECT source_id, row_no FROM population WHERE basis = $basis
+
+  - code: WST-03
+    version: "0.1.0"
+    area: waste
+    name: {sq: "Kosto për ton", en: "Cost per tonne"}
+    question:
+      sq: "Sa kushton menaxhimi i një ton mbetjesh?"
+      en: "What does it cost to manage one tonne of waste?"
+    aliases:
+      sq:
+        - "Kostoja e mbetjeve për ton"
+        - "Sa lekë shpenzojmë për çdo ton mbetje?"
+        - "Kosto për ton e grumbullimit të mbetjeve"
+        - "Sa kushton grumbullimi i mbetjeve për ton?"
+      en:
+        - "Waste management cost per tonne"
+        - "How much do we spend per tonne of waste?"
+        - "Cost per ton of waste collection"
+        - "Waste cost per tonne collected"
+    formula:
+      sq: "Shpenzimet faktike të programit 05100 Menaxhimi i mbetjeve (korrente dhe kapitale) ÷ tonët e grumbulluar, janar – muaji i fundit i përbashkët i dy eksporteve."
+      en: "Actual spending of programme 05100 Waste management (current and capital) ÷ tonnes collected, January to the latest month present in both exports."
+    formula_status: draft
+    unit: lek_per_ton
+    direction: lower_better
+    target: null
+    required_datasets: [waste, budget]
+    owner: public_services
+    smp_ref: "SMP-AL 2024 #15"
+    checks: [placeholder_value, swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, kostoja e menaxhimit të mbetjeve është {value} lekë për ton."
+      en: "From January to {period}, waste management cost {value} lek per tonne."
+    value_sql: |
+      WITH w AS (
+        SELECT least((SELECT max(month) FROM waste_collection),
+                     (SELECT max(month) FROM budget_line)) AS m
+      ), w2 AS (SELECT date_trunc('year', m)::DATE AS y0, m FROM w)
+      SELECT
+        (SELECT sum(b.actual_lek) FROM budget_line b
+         WHERE b.programme_code = '05100' AND b.month BETWEEN w2.y0 AND w2.m)
+          / nullif((SELECT sum(x.tonnes) FROM waste_collection x
+                    WHERE x.month BETWEEN w2.y0 AND w2.m), 0) AS value,
+        strftime(w2.m, '%Y-%m') AS period
+      FROM w2
+    series_sql: |
+      WITH w AS (
+        SELECT least((SELECT max(month) FROM waste_collection),
+                     (SELECT max(month) FROM budget_line)) AS m
+      ), w2 AS (SELECT date_trunc('year', m)::DATE AS y0, m FROM w),
+      t AS (
+        SELECT x.month AS mon, sum(x.tonnes) AS tonnes
+        FROM waste_collection x, w2
+        WHERE x.month BETWEEN w2.y0 AND w2.m
+        GROUP BY x.month
+      ), c AS (
+        SELECT b.month AS mon, sum(b.actual_lek) AS cost
+        FROM budget_line b, w2
+        WHERE b.programme_code = '05100' AND b.month BETWEEN w2.y0 AND w2.m
+        GROUP BY b.month
+      )
+      SELECT strftime(t.mon, '%Y-%m') AS period, c.cost / nullif(t.tonnes, 0) AS value
+      FROM t LEFT JOIN c ON c.mon = t.mon
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT least((SELECT max(month) FROM waste_collection),
+                     (SELECT max(month) FROM budget_line)) AS m
+      ), w2 AS (SELECT date_trunc('year', m)::DATE AS y0, m FROM w)
+      SELECT x.source_id, x.row_no
+      FROM waste_collection x, w2
+      WHERE x.month BETWEEN w2.y0 AND w2.m
+      UNION ALL
+      SELECT b.source_id, b.row_no
+      FROM budget_line b, w2
+      WHERE b.programme_code = '05100' AND b.month BETWEEN w2.y0 AND w2.m
+
+  # ---------------------------------------------------------------- revenue
+  - code: REV-01
+    version: "0.1.0"
+    area: revenue
+    name: {sq: "Arkëtimi i të ardhurave vendore", en: "Local revenue collection"}
+    question:
+      sq: "Sa përqind e të ardhurave të planifikuara janë arkëtuar?"
+      en: "What share of planned local revenue has been collected?"
+    aliases:
+      sq:
+        - "Realizimi i të ardhurave vendore"
+        - "Sa kemi arkëtuar nga taksat dhe tarifat?"
+        - "Arkëtimi kundrejt planit të të ardhurave"
+        - "Shkalla e arkëtimit të taksave"
+      en:
+        - "Local revenue collection rate"
+        - "How much of taxes and fees have we collected?"
+        - "Collected versus planned revenue"
+        - "Tax collection rate"
+    formula:
+      sq: "Të ardhurat e arkëtuara ÷ të ardhurat e planifikuara të periudhës (të gjitha llojet dhe paguesit, janar – muaji i fundit) × 100."
+      en: "Revenue collected ÷ revenue planned for the period (all types and payers, January to the latest month) × 100."
+    formula_status: draft
+    unit: percent
+    direction: higher_better
+    target: 90
+    required_datasets: [revenue]
+    owner: local_revenue
+    smp_ref: null
+    checks: [rate_bounds, off_target, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period} janë arkëtuar {value} e të ardhurave vendore të planifikuara (objektivi: {target})."
+      en: "From January to {period}, {value} of planned local revenue was collected (target: {target})."
+    value_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM revenue
+      )
+      SELECT
+        100.0 * (SELECT sum(r.collected_lek) FROM revenue r WHERE r.month BETWEEN w.y0 AND w.m)
+          / nullif((SELECT sum(r.planned_lek) FROM revenue r WHERE r.month BETWEEN w.y0 AND w.m), 0)
+          AS value,
+        strftime(w.m, '%Y-%m') AS period
+      FROM w
+    series_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM revenue
+      ), mm AS (
+        SELECT r.month AS mon, sum(r.planned_lek) AS p, sum(r.collected_lek) AS a
+        FROM revenue r, w
+        WHERE r.month BETWEEN w.y0 AND w.m
+        GROUP BY r.month
+      )
+      SELECT strftime(mon, '%Y-%m') AS period,
+             100.0 * sum(a) OVER (ORDER BY mon) / nullif(sum(p) OVER (ORDER BY mon), 0) AS value
+      FROM mm
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT date_trunc('year', max(month))::DATE AS y0, max(month) AS m FROM revenue
+      )
+      SELECT r.source_id, r.row_no
+      FROM revenue r, w
+      WHERE r.month BETWEEN w.y0 AND w.m
+
+  - code: REV-02
+    version: "0.1.0"
+    area: revenue
+    name: {sq: "Mbulimi i kostos së mbetjeve nga tarifa", en: "Waste cost covered by the cleaning fee"}
+    question:
+      sq: "Sa e mbulon tarifa e pastrimit koston e mbetjeve?"
+      en: "How much of the waste management cost does the cleaning fee cover?"
+    aliases:
+      sq:
+        - "Mbulimi i kostos nga tarifa e pastrimit"
+        - "A e mbulon tarifa e pastrimit shërbimin e mbetjeve?"
+        - "Tarifa e pastrimit kundrejt shpenzimeve për mbetjet"
+        - "Sa përqind e kostos së pastrimit paguhet nga tarifa?"
+      en:
+        - "Cleaning fee cost coverage"
+        - "Does the cleaning fee cover the waste service?"
+        - "Cleaning fee versus waste spending"
+        - "What percentage of waste costs is paid by the fee?"
+    formula:
+      sq: "Tarifa e pastrimit e arkëtuar ÷ shpenzimet faktike të programit 05100 Menaxhimi i mbetjeve × 100 (bashkon dy eksporte: të ardhurat vendore dhe zbatimin e buxhetit)."
+      en: "Cleaning fee collected ÷ actual spending of programme 05100 Waste management × 100 (joins two exports: local revenue and budget execution)."
+    formula_status: draft
+    unit: percent
+    direction: higher_better
+    target: 100
+    required_datasets: [revenue, budget]
+    owner: local_revenue
+    smp_ref: "SMP-AL 2024 #13"
+    checks: [off_target, swing, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, tarifa e pastrimit e arkëtuar mbulon {value} të shpenzimeve për menaxhimin e mbetjeve (objektivi: {target})."
+      en: "From January to {period}, the cleaning fee collected covers {value} of waste management spending (target: {target})."
+    value_sql: |
+      WITH w AS (
+        SELECT least((SELECT max(month) FROM revenue), (SELECT max(month) FROM budget_line)) AS m
+      ), w2 AS (SELECT date_trunc('year', m)::DATE AS y0, m FROM w)
+      SELECT
+        100.0 * (SELECT sum(r.collected_lek) FROM revenue r
+                 WHERE lower(strip_accents(r.revenue_type)) LIKE '%pastrim%'
+                   AND r.month BETWEEN w2.y0 AND w2.m)
+          / nullif((SELECT sum(b.actual_lek) FROM budget_line b
+                    WHERE b.programme_code = '05100' AND b.month BETWEEN w2.y0 AND w2.m), 0)
+          AS value,
+        strftime(w2.m, '%Y-%m') AS period
+      FROM w2
+    series_sql: |
+      WITH w AS (
+        SELECT least((SELECT max(month) FROM revenue), (SELECT max(month) FROM budget_line)) AS m
+      ), w2 AS (SELECT date_trunc('year', m)::DATE AS y0, m FROM w),
+      f AS (
+        SELECT r.month AS mon, sum(r.collected_lek) AS fee
+        FROM revenue r, w2
+        WHERE lower(strip_accents(r.revenue_type)) LIKE '%pastrim%'
+          AND r.month BETWEEN w2.y0 AND w2.m
+        GROUP BY r.month
+      ), c AS (
+        SELECT b.month AS mon, sum(b.actual_lek) AS cost
+        FROM budget_line b, w2
+        WHERE b.programme_code = '05100' AND b.month BETWEEN w2.y0 AND w2.m
+        GROUP BY b.month
+      )
+      SELECT strftime(c.mon, '%Y-%m') AS period,
+             100.0 * sum(coalesce(f.fee, 0)) OVER (ORDER BY c.mon)
+               / nullif(sum(c.cost) OVER (ORDER BY c.mon), 0) AS value
+      FROM c LEFT JOIN f ON f.mon = c.mon
+      ORDER BY 1
+    lineage_sql: |
+      WITH w AS (
+        SELECT least((SELECT max(month) FROM revenue), (SELECT max(month) FROM budget_line)) AS m
+      ), w2 AS (SELECT date_trunc('year', m)::DATE AS y0, m FROM w)
+      SELECT r.source_id, r.row_no
+      FROM revenue r, w2
+      WHERE lower(strip_accents(r.revenue_type)) LIKE '%pastrim%'
+        AND r.month BETWEEN w2.y0 AND w2.m
+      UNION ALL
+      SELECT b.source_id, b.row_no
+      FROM budget_line b, w2
+      WHERE b.programme_code = '05100' AND b.month BETWEEN w2.y0 AND w2.m
+
+  # ---------------------------------------------------------------- human resources
+  - code: HR-01
+    version: "0.1.0"
+    area: hr
+    name: {sq: "Punonjës për 1.000 banorë", en: "Staff per 1,000 residents"}
+    question:
+      sq: "Sa punonjës ka bashkia për 1.000 banorë?"
+      en: "How many municipal staff are there per 1,000 residents?"
+    aliases:
+      sq:
+        - "Numri i punonjësve për banor"
+        - "Sa staf kemi për çdo 1000 banorë?"
+        - "Punonjës të bashkisë për 1000 banorë"
+        - "Raporti punonjës me popullsinë"
+      en:
+        - "Employees per thousand residents"
+        - "How many staff do we have per 1000 inhabitants?"
+        - "Municipal workforce per 1,000 people"
+        - "Staff to population ratio"
+    formula:
+      sq: "Numri i punonjësve në datën e fundit të gjendjes ÷ banorët (sipas bazës së zgjedhur të popullsisë) × 1.000."
+      en: "Headcount at the latest reporting date ÷ residents (pinned population basis) × 1,000."
+    formula_status: draft
+    unit: per_1000
+    direction: none
+    target: null
+    required_datasets: [staff, population]
+    owner: hr
+    smp_ref: "SMP-AL 2024 #25"
+    checks: [parts_vs_total]
+    answer:
+      sq: "Në {period}, bashkia ka {value} punonjës për 1.000 banorë (baza e popullsisë: {basis})."
+      en: "In {period}, the municipality has {value} staff per 1,000 residents (population basis: {basis})."
+    value_sql: |
+      WITH a AS (SELECT max(as_of) AS d FROM staff),
+      s AS (
+        SELECT sum(st.headcount) AS hc FROM staff st, a WHERE st.as_of IS NOT DISTINCT FROM a.d
+      ), p AS (
+        SELECT sum(residents) AS residents FROM population WHERE basis = $basis
+      )
+      SELECT s.hc * 1000.0 / nullif(p.residents, 0) AS value,
+             (SELECT strftime(d, '%Y-%m') FROM a) AS period
+      FROM s, p
+    series_sql: |
+      WITH p AS (
+        SELECT sum(residents) AS residents FROM population WHERE basis = $basis
+      )
+      SELECT strftime(st.as_of, '%Y-%m') AS period,
+             sum(st.headcount) * 1000.0 / nullif(any_value(p.residents), 0) AS value
+      FROM staff st, p
+      WHERE st.as_of IS NOT NULL
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH a AS (SELECT max(as_of) AS d FROM staff)
+      SELECT st.source_id, st.row_no
+      FROM staff st, a
+      WHERE st.as_of IS NOT DISTINCT FROM a.d
+      UNION ALL
+      SELECT source_id, row_no FROM population WHERE basis = $basis
+
+  - code: HR-02
+    version: "0.1.0"
+    area: hr
+    name:
+      sq: "Shkalla e rotacionit të punonjësve (largime / numri mesatar)"
+      en: "Staff turnover rate (leavers / average headcount)"
+    question:
+      sq: "Sa është rotacioni i punonjësve këtë vit?"
+      en: "What is the staff turnover rate this year?"
+    aliases:
+      sq:
+        - "Sa punonjës janë larguar këtë vit?"
+        - "Largimet e punonjësve kundrejt numrit mesatar"
+        - "Qarkullimi i stafit"
+        - "Shkalla e largimeve nga puna"
+      en:
+        - "Employee turnover"
+        - "How many staff left this year?"
+        - "Staff attrition rate"
+        - "Leavers as a share of average headcount"
+    formula:
+      sq: "Largimet gjatë vitit ÷ numri mesatar i punonjësve × 100; numri mesatar = (numri në fund + numri në fillim) ÷ 2, ku numri në fillim = numri në fund − pranimet + largimet."
+      en: "Leavers during the year ÷ average headcount × 100; average headcount = (end headcount + start headcount) ÷ 2, where start headcount = end headcount − hires + leavers."
+    formula_status: draft
+    unit: percent
+    direction: lower_better
+    target: null
+    required_datasets: [staff]
+    owner: hr
+    smp_ref: "SMP-AL 2024 #23"
+    checks: [rate_bounds, parts_vs_total]
+    answer:
+      sq: "Nga janari deri në {period}, shkalla e rotacionit të punonjësve është {value} (largime ÷ numri mesatar i punonjësve)."
+      en: "From January to {period}, the staff turnover rate is {value} (leavers ÷ average headcount)."
+    value_sql: |
+      WITH a AS (SELECT max(as_of) AS d FROM staff),
+      s AS (
+        SELECT sum(st.headcount) AS hc,
+               sum(coalesce(st.hires, 0)) AS h,
+               sum(coalesce(st.leavers, 0)) AS l
+        FROM staff st, a
+        WHERE st.as_of IS NOT DISTINCT FROM a.d
+      )
+      SELECT 100.0 * s.l / nullif((s.hc + (s.hc - s.h + s.l)) / 2.0, 0) AS value,
+             (SELECT strftime(d, '%Y-%m') FROM a) AS period
+      FROM s
+    series_sql: |
+      SELECT strftime(st.as_of, '%Y-%m') AS period,
+             100.0 * sum(coalesce(st.leavers, 0))
+               / nullif((2 * sum(st.headcount) - sum(coalesce(st.hires, 0))
+                         + sum(coalesce(st.leavers, 0))) / 2.0, 0) AS value
+      FROM staff st
+      WHERE st.as_of IS NOT NULL
+      GROUP BY 1
+      ORDER BY 1
+    lineage_sql: |
+      WITH a AS (SELECT max(as_of) AS d FROM staff)
+      SELECT st.source_id, st.row_no
+      FROM staff st, a
+      WHERE st.as_of IS NOT DISTINCT FROM a.d

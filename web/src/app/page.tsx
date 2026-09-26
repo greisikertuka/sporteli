@@ -1,4 +1,5 @@
-import { Overview } from "@/components/pulse/overview";
-export default function OverviewPage() {
-  return <Overview />;
+import { Board } from "@/components/sportel/board";
+
+export default function BoardPage() {
+  return <Board />;
 }

@@ -1,36 +1,40 @@
-from typing import Annotated
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
-import duckdb
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.warehouse.db import get_connection
+from app.copilot.router import router as copilot_router
+from app.indicators.router import router as indicators_router
+from app.ingest.router import router as ingest_router
+from app.llm.client import get_llm
+from app.meta.router import router as meta_router
+from app.warehouse.db import close_db, get_db
 
-api = APIRouter(prefix="/api/v1")
+API_PREFIX = "/api/v1"
 
 
-@api.get("/health", tags=["system"])
-def health(con: Annotated[duckdb.DuckDBPyConnection, Depends(get_connection)]) -> dict:
-    settings = get_settings()
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    get_db()  # open the process-wide connection and create the schema
+    get_llm()  # restore LLM spend from the call log
     try:
-        db_ok = con.execute("select 1").fetchone()[0] == 1
-    except duckdb.Error:
-        db_ok = False
-    return {
-        "status": "ok",
-        "db": db_ok,
-        "llm": bool(settings.anthropic_api_key),
-        "version": settings.app_version,
-    }
+        yield
+    finally:
+        close_db()
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="Elbasan Pulse API",
+        title="Sportel API",
         version=settings.app_version,
-        description="Unified municipal data, KPIs and decision support.",
+        description=(
+            "Sportel — Raporto një herë, provo çdo numër (Report once, prove every number). "
+            "Municipal exports in, proven indicators out."
+        ),
+        lifespan=lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -38,7 +42,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(api)
+    for router in (meta_router, ingest_router, indicators_router, copilot_router):
+        app.include_router(router, prefix=API_PREFIX)
     return app
 
 

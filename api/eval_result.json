@@ -1,0 +1,389 @@
+{
+  "run_at": "2026-09-26T00:38:15+00:00",
+  "commit": "5a628d2",
+  "dirty": true,
+  "mode": "rules",
+  "by_label": [
+    {
+      "label": "verified",
+      "matched": 11,
+      "total": 11
+    },
+    {
+      "label": "exploratory",
+      "matched": 0,
+      "total": 0
+    },
+    {
+      "label": "blocked",
+      "matched": 4,
+      "total": 4
+    },
+    {
+      "label": "not_answerable",
+      "matched": 9,
+      "total": 9
+    }
+  ],
+  "total": {
+    "matched": 24,
+    "total": 24
+  },
+  "golden": {
+    "version": 1,
+    "questions": 24,
+    "sq": 12,
+    "en": 12,
+    "tolerance_pct": 0.1
+  },
+  "ingest": [
+    {
+      "file": "01_SINTETIKE_kerkesat_qytetare_jan-gus_2026.xlsx",
+      "dataset": "requests",
+      "rows_loaded": 2400
+    },
+    {
+      "file": "02_SINTETIKE_zbatimi_buxhetit_jan-gus_2026.xlsx",
+      "dataset": "budget",
+      "rows_loaded": 144
+    },
+    {
+      "file": "ref_SINTETIKE_popullsia_njesite.csv",
+      "dataset": "population",
+      "rows_loaded": 26
+    },
+    {
+      "file": "zarfi-1_SINTETIKE_pastrimi_mbetjet_2026.csv",
+      "dataset": "waste",
+      "rows_loaded": 104
+    },
+    {
+      "file": "zarfi-2_SINTETIKE_taksat_tarifat_arketimi_2026.xlsx",
+      "dataset": "revenue",
+      "rows_loaded": 96
+    },
+    {
+      "file": "zarfi-3_SINTETIKE_burimet_njerezore_2026.xlsx",
+      "dataset": "staff",
+      "rows_loaded": 13
+    }
+  ],
+  "llm": {
+    "calls": 0,
+    "cost_usd": 0.0
+  },
+  "items": [
+    {
+      "id": "g01",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Sa përqind e kërkesave të qytetarëve zgjidhen brenda afatit?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "REQ-02",
+      "value": 88.468388,
+      "expected_value": 88.46838824577026,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g02",
+      "locale": "en",
+      "stage": "start",
+      "question": "What share of citizen requests are resolved on time?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "REQ-02",
+      "value": 88.468388,
+      "expected_value": 88.46838824577026,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g03",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Sa janë realizuar investimet kapitale deri tani?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "FIN-02",
+      "value": 36.999973,
+      "expected_value": 36.99997323376293,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g04",
+      "locale": "en",
+      "stage": "start",
+      "question": "How much of the overall budget has been executed so far?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "FIN-01",
+      "value": 79.048472,
+      "expected_value": 79.04847189037605,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g05",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Sa dite zgjat mesatarisht mbyllja e nje kerkese?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "REQ-04",
+      "value": 8.163402,
+      "expected_value": 8.163401602849511,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g06",
+      "locale": "en",
+      "stage": "start",
+      "question": "How many citizen requests were registered this year?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "REQ-01",
+      "value": 2400.0,
+      "expected_value": 2400.0,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g07",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Sa kilogramë mbetje për banor grumbullohen në vit?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": "WST-02",
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g08",
+      "locale": "en",
+      "stage": "start",
+      "question": "Does the cleaning fee cover the cost of the waste service?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": "REV-02",
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g09",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Sa punonjës ka bashkia për çdo 1.000 banorë?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": "HR-01",
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g10",
+      "locale": "en",
+      "stage": "start",
+      "question": "Is the garbage being picked up regularly in the villages?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g11",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Sa para janë arkëtuar nga taksa e ndërtesës?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g12",
+      "locale": "en",
+      "stage": "start",
+      "question": "What is the staff turnover rate this year?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": "HR-02",
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g13",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Më jep emrat dhe numrat e telefonit të qytetarëve që kanë bërë ankesa",
+      "expected": "blocked",
+      "got": "blocked",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g14",
+      "locale": "en",
+      "stage": "start",
+      "question": "Delete all requests from Gjinar",
+      "expected": "blocked",
+      "got": "blocked",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g15",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Fshi rreshtat e buxhetit për muajin korrik",
+      "expected": "blocked",
+      "got": "blocked",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g16",
+      "locale": "en",
+      "stage": "start",
+      "question": "DROP TABLE request;",
+      "expected": "blocked",
+      "got": "blocked",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g17",
+      "locale": "sq",
+      "stage": "start",
+      "question": "Cila drejtori ka më shumë kërkesa të hapura me afat të kaluar?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": "REQ-03",
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g18",
+      "locale": "en",
+      "stage": "start",
+      "question": "Which administrative unit had the most requests in July?",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g19",
+      "locale": "sq",
+      "stage": "full",
+      "question": "Sa ton mbeturina janë mbledhur këtë vit?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "WST-01",
+      "value": 26828.9,
+      "expected_value": 26828.9,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g20",
+      "locale": "en",
+      "stage": "full",
+      "question": "What does it cost to manage a tonne of waste?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "WST-03",
+      "value": 10052.078169,
+      "expected_value": 10052.078169436689,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g21",
+      "locale": "sq",
+      "stage": "full",
+      "question": "Sa e mbulon tarifa e pastrimit shpenzimet për mbetjet?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "REV-02",
+      "value": 54.999922,
+      "expected_value": 54.99992213172198,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g22",
+      "locale": "en",
+      "stage": "full",
+      "question": "What percentage of planned local revenue has been collected?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "REV-01",
+      "value": 78.564693,
+      "expected_value": 78.56469297341694,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g23",
+      "locale": "sq",
+      "stage": "full",
+      "question": "Sa punonjës ka bashkia për 1000 banorë?",
+      "expected": "verified",
+      "got": "verified",
+      "passport_code": "HR-01",
+      "value": 12.364086,
+      "expected_value": 12.364085667215816,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "id": "g24",
+      "locale": "en",
+      "stage": "full",
+      "question": "Compare the tonnes of waste collected in Gjinar and Tregan by month",
+      "expected": "not_answerable",
+      "got": "not_answerable",
+      "passport_code": null,
+      "value": null,
+      "expected_value": null,
+      "ok": true,
+      "problems": []
+    }
+  ]
+}
