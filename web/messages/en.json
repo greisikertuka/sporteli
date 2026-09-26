@@ -342,7 +342,7 @@
   "ask": {
     "kicker": "Ask the data · four labels",
     "title": "One question. An answer with proof, or the reason there is none.",
-    "description": "The label is decided by code, not by the model. Every number comes from SQL you can read.",
+    "description": "The label is decided by code, not by the model. Every number links back to the source file and rows it came from.",
     "label": "Your question",
     "placeholder": "e.g. What share of requests was resolved on time in August?",
     "submit": "Ask",
@@ -356,7 +356,6 @@
     },
     "empty": "Type a question or choose an example.",
     "interpreted": "Interpreted as",
-    "sql": "SQL executed",
     "sources": "Sources",
     "rows": "rows {rows}",
     "result": "Result",

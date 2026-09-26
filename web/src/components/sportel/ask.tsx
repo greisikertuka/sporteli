@@ -27,7 +27,7 @@ import { asLocale, formatCell, formatDateTime, formatIndicatorValue, formatMs, f
 import { ASK_LABEL_TONE, ASK_LABELS } from "@/lib/labels";
 
 import { useSystem } from "./system-context";
-import { CodeChip, ErrorState, PageHeader, ReplayStamp, SqlBlock, ToneChip } from "./ui";
+import { CodeChip, ErrorState, PageHeader, ReplayStamp, ToneChip } from "./ui";
 
 const LABEL_ICON: Record<AskLabel, React.ComponentType<{ "aria-hidden"?: boolean }>> = {
   verified: SearchCheck,
@@ -420,12 +420,6 @@ function AnswerCard({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {a.sql && (
-        <div className="answer-block">
-          <SqlBlock sql={a.sql} title={t("ask.sql")} />
         </div>
       )}
 

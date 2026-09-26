@@ -342,7 +342,7 @@
   "ask": {
     "kicker": "Pyet të dhënat · katër etiketa",
     "title": "Një pyetje. Një përgjigje me provë, ose arsyeja pse nuk ka.",
-    "description": "Etiketa vendoset nga kodi, jo nga modeli. Çdo numër vjen nga një SQL që mund ta lexoni.",
+    "description": "Etiketa vendoset nga kodi, jo nga modeli. Çdo numër lidhet me skedarin dhe rreshtat burimorë nga vjen.",
     "label": "Pyetja juaj",
     "placeholder": "p.sh. Sa përqind e kërkesave u zgjidhën brenda afatit në gusht?",
     "submit": "Pyet",
@@ -356,7 +356,6 @@
     },
     "empty": "Shkruani një pyetje ose zgjidhni një shembull.",
     "interpreted": "Kuptuar si",
-    "sql": "SQL e ekzekutuar",
     "sources": "Burimet",
     "rows": "rreshtat {rows}",
     "result": "Rezultati",
