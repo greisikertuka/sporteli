@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sportel · web
 
-## Getting Started
+Next.js 16 (App Router, React 19, Tailwind 4, next-intl) front end for Sportel — "Raporto një
+herë, provo çdo numër". Albanian by default, English toggle. The screens and JSON contracts are
+defined in `docs/superpowers/specs/2026-09-26-gap-to-proof-build.md` (§7 API, §8 screens).
 
-First, run the development server:
+| Route | Screen |
+|---|---|
+| `/` | Paneli — proof counter, tiles by area, passport drawer, trend, signals, .xlsx export |
+| `/ingest` | Integro — dropzone, sample envelopes, step log, mapping, PII gate, Load Receipt, sources |
+| `/ask` | Pyet të dhënat — four labels, interpreted-as, SQL, sources, gap card, eval chips |
+| `/indicators/[code]` | Full passport page (shareable) |
+| `/coverage` | Mbulimi SMP — the 52 Annex A indicators, draft mapping pending approval |
+| `/briefing` | Raporti — printable report; every number is a chip that shows its source |
+| `/trust` | Besueshmëria — AI vs code, LLM call log, spend, eval, limits |
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev                      # http://localhost:3000, API at NEXT_PUBLIC_API_URL (default http://localhost:8000)
+pnpm lint && pnpm test && pnpm build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## REPLAY (offline)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+If the API cannot be reached, every call is answered by the REPLAY engine in
+`src/lib/fixtures/` and the header shows a **REPLAY** badge. `NEXT_PUBLIC_USE_FIXTURES=1` forces it.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+REPLAY computes nothing: `src/lib/fixtures/snapshot.ts` holds real API responses over the
+synthetic sample exports — passports, lineage, previews, receipts, answers and the SMP
+coverage in the start state, the full state and with the civil-registry basis — recorded by
+`scripts/record-replay.mjs`. The engine only tracks which exports are loaded and picks the
+matching response, so offline and live show the same numbers. Re-record after changing
+passports, samples or the ingest pipeline:
 
-## Learn More
+```bash
+make api                                   # or any running API
+pnpm --dir web record-replay               # default http://localhost:8000; pass another URL as an argument
+pnpm --dir web test
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Conventions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Every UI string lives in `messages/sq.json` and `messages/en.json` (identical key sets).
+- Numbers are formatted by `src/lib/format.ts` (Albanian `1.248,5`, English `1,248.5`).
+- Design tokens: `src/app/globals.css` (base, light/dark), `sportel.css` (shell, board,
+  passport), `sportel-screens.css` (ingest, ask, coverage, briefing, trust, responsive, print).

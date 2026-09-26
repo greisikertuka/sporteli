@@ -29,8 +29,8 @@
     "aiLiveHint": "The AI model is active: it proposes column mappings and reads questions. Code computes every number.",
     "aiRulesHint": "AI is not active: mapping and questions use deterministic rules. Nothing is sent outside.",
     "replay": "REPLAY",
-    "replayForcedHint": "Showing REPLAY fixtures (NEXT_PUBLIC_USE_FIXTURES=1), not the live API.",
-    "replayOfflineHint": "The API is unreachable. Showing an offline replay with synthetic data; no number comes from the live API.",
+    "replayForcedHint": "REPLAY (NEXT_PUBLIC_USE_FIXTURES=1): responses recorded from the API over the synthetic data. The browser computes no number.",
+    "replayOfflineHint": "The API is unreachable. Showing REPLAY: responses recorded earlier from the API over the synthetic data, not live data.",
     "apiOnline": "API online",
     "apiOffline": "API offline",
     "apiChecking": "Checking API…",
@@ -56,19 +56,13 @@
     "close": "Close",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "download": "Download",
     "print": "Print",
     "synthetic": "SYNTHETIC",
     "draft": "Draft",
     "owner": "Owner",
-    "rows": "{count, plural, one {# row} other {# rows}}",
-    "indicators": "{count, plural, one {# indicator} other {# indicators}}",
     "none": "None",
-    "yes": "Yes",
-    "no": "No",
     "errorTitle": "The data did not load",
-    "errorBody": "The request failed ({code}). Please try again.",
-    "replayNote": "REPLAY"
+    "errorBody": "The request failed ({code}). Please try again."
   },
   "board": {
     "kicker": "Board · data up to {date}",
@@ -133,7 +127,6 @@
     "owner": "Owner: {owner}",
     "upload": "Upload the export",
     "proven": "With proof",
-    "syntheticSource": "Synthetic source",
     "basis": "basis: {basis}",
     "draft": "draft formula"
   },
@@ -150,13 +143,12 @@
     "owner": "Owner",
     "status": "Status",
     "basis": "Population basis",
-    "computedAt": "Computed at {time}",
     "formula": "Formula",
     "question": "Canonical question",
     "sql": "SQL that computes the value",
     "copySql": "Copy SQL",
     "lineage": "Lineage: files and rows",
-    "lineageRows": "{count, plural, one {# row} other {# rows}} · rows {ranges}",
+    "lineageRows": "{rows} {count, plural, one {row} other {rows}} · rows {ranges}",
     "hash": "hash",
     "sourceRows": "Source rows",
     "sourceRowsNote": "{shown} of {total} contributing rows · row number in the original file",
@@ -172,11 +164,12 @@
     "openPage": "Open the passport page",
     "backToBoard": "Back to the board",
     "notFound": "Indicator {code} was not found.",
-    "smpRef": "SMP reference",
     "required": "Required data",
     "sources": "Sources",
     "loadingRows": "Loading rows…",
-    "computed": "Computed at"
+    "computed": "Computed at",
+    "rangesMore": "… +{count, plural, one {# more range} other {# more ranges}}",
+    "rangesAll": "Show every row range"
   },
   "ingest": {
     "kicker": "Integration · report once",
@@ -206,9 +199,10 @@
       "pii": "Personal data",
       "profile": "Profile",
       "recipe": "Recipe",
-      "mapping": "Mapping"
+      "mapping": "Mapping",
+      "dataset": "Dataset"
     },
-    "fileMeta": "{rows, plural, one {# data row} other {# data rows}} · header at row {header}",
+    "fileMeta": "{shown} {rows, plural, one {data row} other {data rows}} · header at row {header}",
     "sheet": "sheet «{sheet}»",
     "datasetDetected": "Dataset: {name}",
     "datasetConfidence": "confidence {pct}",
@@ -269,7 +263,6 @@
     "llmUsed": "AI: {model} · {latency} · {cost}",
     "llmSent": "Sent: {headers} headers · ≤{samples} samples/column · 0 rows",
     "llmError": "AI failed ({error}); rules were used.",
-    "warnings": "Notes",
     "sourcesTitle": "Loaded sources",
     "sourcesNote": "Every load has its own receipt.",
     "recipes": "{count, plural, =0 {No saved recipes} one {# saved recipe} other {# saved recipes}}",
@@ -288,7 +281,11 @@
     "notReconciled": "Does not reconcile",
     "unknownDataset": "The dataset was not recognised automatically: choose it below.",
     "another": "Load another file",
-    "auto": "Automatic"
+    "auto": "Automatic",
+    "actionError": "The action did not complete. Please try again.",
+    "liveReady": "{steps} steps done. Check the column mapping before confirming.",
+    "liveDone": "{rows} rows loaded. Coverage now: {computable}/{total}.",
+    "llmBudget": "The AI budget for this demo is spent; the mapping used rules."
   },
   "receipt": {
     "title": "Load receipt",
@@ -350,7 +347,6 @@
     "gapOwner": "Owner",
     "gapCta": "Upload the export",
     "gapSample": "File: {name}",
-    "noGuess": "No number was guessed.",
     "blockedTitle": "Why it was blocked",
     "passport": "Open passport {code}",
     "llmRules": "No AI · rules",
@@ -362,7 +358,8 @@
     "evalTitle": "Accuracy on our own {total}-question set — indicative, not a benchmark",
     "evalNote": "Run at {time} · mode {mode}",
     "legend": "What the label means",
-    "ask": "Ask: {question}"
+    "ask": "Ask: {question}",
+    "emptyTitle": "No question yet"
   },
   "labels": {
     "verified": {
@@ -393,18 +390,18 @@
     "banner": "Draft mapping · pending organiser approval",
     "bannerBody": "This map is not an official submission and does not predict grant points.",
     "state": {
-      "computable": "Has a passport",
+      "computable": "With proof",
       "document": "Document check",
       "national": "National · AMVV",
       "missing": "Missing",
       "manual": "Manual"
     },
     "stateHint": {
-      "computable": "Computed by a Sportel passport once the exports are loaded.",
+      "computable": "Computed today by a Sportel passport from the loaded exports.",
       "document": "Needs a link to the plan or publication and a person's confirmation.",
       "national": "Source: Ministry of Finance, computed by AMVV. Sportel does not compute it.",
       "missing": "The data is not in today's exports: the week-one pilot list.",
-      "manual": "Filled in by hand by the owner."
+      "manual": "Counted from the responsible unit's register, not from an export."
     },
     "filterAll": "All",
     "filterLabel": "Filter by state",
@@ -416,7 +413,8 @@
     "ownerTbd": "Owner: to be confirmed at the municipality",
     "count": "{count, plural, one {# indicator} other {# indicators}}",
     "number": "No. {n}",
-    "replayNote": "In REPLAY the official Annex A names are not shown; they come from the API (al_smp pack)."
+    "mapped": "{count} mapped to Sportel passports",
+    "waffleMapped": "Mapped to a Sportel passport: gets its proof as soon as the export is loaded."
   },
   "briefing": {
     "kicker": "Monthly report",
@@ -435,7 +433,6 @@
     "sentenceNoTarget": "{name}: <v>{value}</v> for {period}.",
     "statusOn": "on track",
     "statusOff": "off track",
-    "gapsTitle": "Missing data",
     "gapItem": "{dataset}: owner {owner}.",
     "signalsTitle": "Signals to check",
     "sourcesTitle": "Data sources",
@@ -478,7 +475,7 @@
     "limitsTitle": "Limits, stated openly",
     "limits": [
       "Every formula is our reading of the public passports until the Performance Unit or AMVV validates it; until then it is marked \"draft\".",
-      "About 13–14 SMP indicators are document checks (the plan or publication exists) that need a link and a person's confirmation.",
+      "10 SMP indicators are document checks (the plan or publication exists) and 7 are counted from registers; they need a link and a person's confirmation.",
       "Indicators 41–52 are computed nationally by AMVV from Ministry of Finance data; Sportel does not compute them.",
       "A missing input is marked \"not computable\" with its owner named; it is never estimated.",
       "Sportel proves consistency and lineage, not that a department's file is true.",
@@ -509,7 +506,11 @@
     "evalTitle": "Accuracy by label",
     "evalNote": "Our own {total}-question set · indicative, not a benchmark · {time} · {mode}",
     "evalMissing": "The evaluation has not been run yet.",
-    "evalRow": "{matched} of {total}"
+    "evalRow": "{matched} of {total}",
+    "purpose": {
+      "ingest_mapping": "Column mapping",
+      "copilot_intent": "Question routing"
+    }
   },
   "notFound": {
     "title": "Page not found",

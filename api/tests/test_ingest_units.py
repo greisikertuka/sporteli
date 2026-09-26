@@ -72,7 +72,11 @@ def test_two_level_header_and_unit_from_group_cell():
 
     layout = analyse(reader.read_table(xlsx_bytes(build), "b.xlsx"))
     assert layout.header_rows == [2, 3]
-    assert layout.headers[:3] == ["Programi", "Plani (000 lekë) Korrente", "Plani (000 lekë) Kapitale"]
+    assert layout.headers[:3] == [
+        "Programi",
+        "Plani (000 lekë) Korrente",
+        "Plani (000 lekë) Kapitale",
+    ]
     assert layout.col_multiplier[1:3] == [1000, 1000]
     assert len(layout.data) == 2
 
@@ -157,7 +161,7 @@ def test_xls_reader():
         ("Kodi", ["J12345678K", "K98765432L", "I11223344M"], "personal_id"),
         ("Kontakti", ["a.b@example.com", "c@d.al", "e@f.org"], "email"),
         ("Shënime", ["Telefononi 069 123 4567 për detaje të mëtejshme"], "phone"),
-        ("Përgjegjësi", [f"{n} {i}." for n, i in zip("Arben Ilir Teuta Genc Sara".split(), "KLMNP")], "name"),
+        ("Përgjegjësi", ["Arben K.", "Ilir L.", "Teuta M.", "Genc N.", "Sara P."], "name"),
         ("Qytetari", ["Arben Hoxha", "Teuta Leka", "Ilir Gjoka", "Sara Bala", "Genc Duka"], "name"),
     ],
 )

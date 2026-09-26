@@ -9,8 +9,9 @@ import { useMemo, useState } from "react";
 import { useApi } from "@/hooks/use-api";
 import type { IndicatorSummary, Passport } from "@/lib/api";
 import { exportXlsxUrl, getPassport, openDataCsvUrl } from "@/lib/client";
-import { formatDate, formatDateTime, formatIndicatorValue, formatPeriod, formatTarget, pick } from "@/lib/format";
+import { formatDate, formatDateTime, formatIndicatorValue, formatPeriod, formatTarget, pick, summariseRanges } from "@/lib/format";
 import { groupIndicatorsByArea, leadershipSummary } from "@/lib/labels";
+import { downloadReplayCsv } from "@/lib/replay-export";
 
 import { SportelMark } from "../app-sidebar";
 import { useSystem } from "./system-context";
@@ -18,8 +19,15 @@ import { CodeChip, ErrorState, LoadingBlock, PageHeader, SyntheticMark } from ".
 
 type Note = { n: number; indicator: IndicatorSummary; passport: Passport | undefined };
 
+/** First row ranges of a lineage entry, with "+N more" when the list is long. */
+function rangeText(ranges: string, tp: (key: "rangesMore", values: { count: number }) => string) {
+  const r = summariseRanges(ranges);
+  return r.more > 0 ? `${r.text} ${tp("rangesMore", { count: r.more })}` : r.text;
+}
+
 function ValueChip({ note, children }: { note: Note; children: React.ReactNode }) {
   const t = useTranslations("briefing");
+  const tp = useTranslations("passport");
   const locale = useLocale();
   const p = note.passport;
   return (
@@ -39,7 +47,7 @@ function ValueChip({ note, children }: { note: Note; children: React.ReactNode }
                 <dt>{t("chipSource")}</dt>
                 <dd className="mono">{l.filename}</dd>
                 <dt>{t("chipRows")}</dt>
-                <dd className="mono">{l.row_ranges}</dd>
+                <dd className="mono">{rangeText(l.row_ranges, tp)}</dd>
               </div>
             ))}
           </dl>
@@ -59,6 +67,8 @@ function ValueChip({ note, children }: { note: Note; children: React.ReactNode }
 export function BriefingScreen() {
   const t = useTranslations("briefing");
   const tc = useTranslations("common");
+  const tb = useTranslations("board");
+  const tp = useTranslations("passport");
   const locale = useLocale();
   const { board, replay } = useSystem();
   const [generatedAt] = useState(() => new Date().toISOString());
@@ -131,7 +141,12 @@ export function BriefingScreen() {
               <Printer aria-hidden />
               {tc("print")}
             </button>
-            {!replay.replay && (
+            {replay.replay ? (
+              <button type="button" className="civic-button" onClick={() => downloadReplayCsv(data, locale)} title={tb("downloadReplayHint")}>
+                <Download aria-hidden />
+                {tb("downloadReplayCsv")}
+              </button>
+            ) : (
               <>
                 <a className="civic-button" href={exportXlsxUrl(data.pack)} download>
                   <FileSpreadsheet aria-hidden />
@@ -241,14 +256,14 @@ export function BriefingScreen() {
             {[...notes.values()].map((note) => (
               <li key={note.indicator.code} value={note.n}>
                 <span className="fn-code">{note.indicator.code}</span>{" "}
-                {(note.passport?.lineage ?? []).map((l) => `${l.filename} · ${l.row_ranges}`).join(" ; ") ||
+                {(note.passport?.lineage ?? []).map((l) => `${l.filename} · ${rangeText(l.row_ranges, tp)}`).join(" ; ") ||
                   note.indicator.sources.map((s) => s.filename).join(" ; ")}{" "}
                 <span className="fn-version">v{note.indicator.version}</span>
               </li>
             ))}
           </ol>
           <p className="fine-print">
-            {[...files.entries()].map(([f, synthetic]) => `${f}${synthetic ? " (SINTETIKE)" : ""}`).join(" · ")}
+            {[...files.entries()].map(([f, synthetic]) => `${f}${synthetic ? ` (${tc("synthetic")})` : ""}`).join(" · ")}
           </p>
         </section>
 

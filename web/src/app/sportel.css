@@ -1048,8 +1048,17 @@ a.text-button {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
   min-height: 24px;
+  min-width: 0;
+}
+.tile-top > * {
+  flex: none;
+}
+.tile-top > .tile-smp {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tile-smp {
   font-family: var(--font-mono-stack);
@@ -1126,18 +1135,25 @@ a.text-button {
 }
 .tile-figure-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 10px;
+  gap: 4px 10px;
   margin-top: 10px;
 }
+/* The figure never truncates; the sparkline gives way first, then wraps below it. */
 .tile-figure {
   display: flex;
+  flex: none;
   align-items: baseline;
   gap: 5px;
-  min-width: 0;
   flex-wrap: nowrap;
   white-space: nowrap;
+}
+.tile-figure-row .sparkline {
+  flex: 0 1 112px;
+  min-width: 72px;
+  height: auto;
 }
 .figure-number {
   font-size: 38px;
@@ -1145,6 +1161,7 @@ a.text-button {
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--foreground);
+  font-variant-numeric: tabular-nums lining-nums;
 }
 .figure-unit {
   font-size: 14px;
@@ -1241,21 +1258,6 @@ a.text-button {
 .tile-gap .tile-name {
   color: var(--foreground);
   opacity: 0.8;
-}
-.tile-gap-flag {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-mono-stack);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--gap-ink);
-}
-.tile-gap-flag svg {
-  width: 13px;
-  height: 13px;
 }
 .tile-gap-icon {
   margin-left: auto;
@@ -1586,6 +1588,28 @@ h2.passport-title {
 .lineage-rows {
   font-size: 13px;
   color: var(--foreground);
+}
+.lineage-all {
+  font-size: 12px;
+}
+.lineage-all summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--primary);
+  font-weight: 600;
+}
+.lineage-all p {
+  margin-top: 6px;
+  max-height: 9.5em;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--muted);
+  font-family: var(--font-mono-stack);
+  font-size: 11.5px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .lineage-hash {
   display: inline-flex;

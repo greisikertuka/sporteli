@@ -972,6 +972,7 @@
 .receipt-brand {
   font-size: 11px;
   letter-spacing: 0.4em;
+  text-transform: uppercase;
   opacity: 0.75;
 }
 .receipt-head h3 {
@@ -1464,9 +1465,31 @@
   white-space: nowrap;
 }
 .answer-empty {
-  font-size: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
   color: var(--muted-foreground);
-  padding: 8px 2px;
+  font-size: 14px;
+}
+.answer-empty > svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--city-blue);
+  opacity: 0.7;
+}
+.answer-empty strong {
+  display: block;
+  color: var(--foreground);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.dark .answer-empty > svg {
+  color: var(--city-yellow);
 }
 .label-stamp {
   display: inline-flex;
@@ -1654,10 +1677,6 @@
   font-family: var(--font-mono-stack);
   font-size: 11.5px;
   overflow-wrap: anywhere;
-}
-.gap-card .gap-noguess {
-  font-weight: 600;
-  color: var(--foreground);
 }
 .blocked-card {
   align-items: flex-start;
@@ -1862,6 +1881,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+/* The number this pilot moves gets the full width; the other states pair up below. */
+.coverage-stat.tone-success {
+  grid-column: 1 / -1;
+}
 .coverage-stat {
   display: grid;
   gap: 2px;
@@ -1901,6 +1924,9 @@
 }
 .coverage-stat.tone-gap .stat-count {
   color: var(--gap-ink);
+}
+.coverage-stat.tone-warning .stat-count {
+  color: var(--tone-warning-fg);
 }
 .stat-label {
   font-weight: 600;
@@ -1957,15 +1983,22 @@
 }
 .waffle li[data-state="computable"] a {
   border: 2px solid var(--proof);
-  color: var(--tone-success-fg);
-  background: var(--tone-success-bg);
-}
-.waffle li[data-state="computable"][data-live] a {
   background: var(--proof);
   color: #fff;
 }
-.dark .waffle li[data-state="computable"][data-live] a {
+.dark .waffle li[data-state="computable"] a {
   color: #0d1a14;
+}
+/* Mapped to a passport, one export away from proof. */
+.waffle li[data-state="missing"][data-mapped] a {
+  border: 2px dashed var(--proof);
+  color: var(--tone-success-fg);
+  background: var(--tone-success-bg);
+}
+.waffle li[data-state="manual"] a {
+  background: var(--tone-warning-bg);
+  color: var(--tone-warning-fg);
+  border: 1px solid var(--tone-warning-bd);
 }
 .waffle li[data-state="document"] a {
   background: var(--tone-info-bg);
@@ -1984,6 +2017,22 @@
 }
 .waffle li.dim a {
   opacity: 0.25;
+}
+.waffle-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.waffle-legend i {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 2px dashed var(--proof);
+  background: var(--tone-success-bg);
 }
 .coverage-filter {
   display: flex;
@@ -2030,6 +2079,9 @@
 }
 .state-dot.tone-gap {
   border: 1px dashed currentColor;
+}
+.state-dot.tone-warning {
+  background: var(--tone-warning-fg);
 }
 .coverage-group {
   margin-top: 22px;
@@ -2780,6 +2832,22 @@
   }
   .coverage-stat .stat-hint {
     display: none;
+  }
+  /* One swipeable row of status pills keeps the sticky header short on phones. */
+  .status-badges {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding: 2px 16px 6px;
+    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 20px), transparent 100%);
+  }
+  .status-badges::-webkit-scrollbar {
+    display: none;
+  }
+  .status-badges > * {
+    flex: none;
   }
 }
 

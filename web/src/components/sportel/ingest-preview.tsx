@@ -157,7 +157,7 @@ export function PreviewDetails({
           {preview.synthetic && <SyntheticMark compact />}
         </div>
         <p className="preview-facts">
-          {t("fileMeta", { rows: preview.data_rows, header: preview.header_row })}
+          {t("fileMeta", { shown: formatNumber(preview.data_rows, locale), rows: preview.data_rows, header: preview.header_row })}
           {preview.sheet && <> · {t("sheet", { sheet: preview.sheet })}</>} · {formatBytes(preview.size_bytes, locale)}
         </p>
         <div className="preview-dataset">
@@ -276,7 +276,12 @@ export function PreviewDetails({
                 {t("llmSent", { headers: preview.llm.sent.headers, samples: preview.llm.sent.samples_per_column })}
               </p>
             )}
-            {preview.llm.error && <p>{t("llmError", { error: preview.llm.error })}</p>}
+            {/* "llm_unavailable" just means RULES mode (no key): the line above already says so. */}
+            {preview.llm.error === "llm_budget_exhausted" ? (
+              <p>{t("llmBudget")}</p>
+            ) : preview.llm.error && preview.llm.error !== "llm_unavailable" ? (
+              <p>{t("llmError", { error: preview.llm.error })}</p>
+            ) : null}
             {preview.warnings.map((w, i) => (
               <p key={i}>{pick(w, locale)}</p>
             ))}

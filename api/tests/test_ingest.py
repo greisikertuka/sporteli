@@ -138,7 +138,9 @@ def test_commit_reconciles_and_applies_units(db):
         assert r["rows_read"] == r["rows_loaded"] + sum(x["count"] for x in r["rows_excluded"])
         assert r["synthetic"] is True
         assert r["dataset_name"] == c.get_dataset(p["dataset"]["key"]).name
-    plan, actual = db.execute("SELECT sum(planned_lek), sum(actual_lek) FROM budget_line").fetchone()
+    plan, actual = db.execute(
+        "SELECT sum(planned_lek), sum(actual_lek) FROM budget_line"
+    ).fetchone()
     assert plan == pytest.approx(2_526_229.1 * 1000)
     assert actual == pytest.approx(1_996_945.5 * 1000)
     collected = db.execute("SELECT sum(collected_lek) FROM revenue").fetchone()[0]
@@ -148,13 +150,14 @@ def test_commit_reconciles_and_applies_units(db):
     )
     assert db.execute("SELECT sum(headcount) FROM staff").fetchone()[0] == 1501
     # staff as_of comes from the header "Numri i punonjësve (31.08.2026)"
-    assert {r[0].isoformat() for r in db.execute("SELECT DISTINCT as_of FROM staff").fetchall()} == {
-        "2026-08-31"
-    }
+    assert {
+        r[0].isoformat() for r in db.execute("SELECT DISTINCT as_of FROM staff").fetchall()
+    } == {"2026-08-31"}
     # the programme code keeps its leading zero, line types are canonical
-    assert db.execute("SELECT count(*) FROM budget_line WHERE programme_code = '05100'").fetchone()[
-        0
-    ] == 16
+    assert (
+        db.execute("SELECT count(*) FROM budget_line WHERE programme_code = '05100'").fetchone()[0]
+        == 16
+    )
     assert {r[0] for r in db.execute("SELECT DISTINCT line_type FROM budget_line").fetchall()} == {
         "current",
         "capital",
@@ -206,7 +209,9 @@ def test_admin_unit_variants_are_normalised(db):
     for table in ("request", "waste_collection"):
         units = {u for (u,) in db.execute(f"SELECT DISTINCT admin_unit FROM {table}").fetchall()}
         assert units <= set(c.ADMIN_UNITS), table
-    assert len({u for (u,) in db.execute("SELECT admin_unit FROM waste_collection").fetchall()}) == 13
+    assert (
+        len({u for (u,) in db.execute("SELECT admin_unit FROM waste_collection").fetchall()}) == 13
+    )
 
 
 def test_recipe_is_reused_on_the_second_load(db):
@@ -222,7 +227,9 @@ def test_recipe_is_reused_on_the_second_load(db):
     second = pipeline.commit(p["preview_id"], "waste", mapping_of(p), save_recipe=True, con=db)
     assert second["recipe"] == {"saved": False, "reused": True, "recipe_id": rid}
     # the same export loaded twice replaces the first load: no double counting
-    assert db.execute("SELECT count(*), count(DISTINCT source_id) FROM waste_collection").fetchone() == (
+    assert db.execute(
+        "SELECT count(*), count(DISTINCT source_id) FROM waste_collection"
+    ).fetchone() == (
         104,
         1,
     )
@@ -293,7 +300,9 @@ def test_commit_validates_the_mapping(db):
     fails([m for m in base if m["field"] != "status"], "missing_required_fields")
     fails([*base, {"column": "Emri i kërkuesit", "field": "department"}], "personal_column")
     fails([*base, {"column": "Nope", "field": None}], "unknown_column")
-    fails([{**m, "field": "tonnes"} if m["field"] == "category" else m for m in base], "unknown_field")
+    fails(
+        [{**m, "field": "tonnes"} if m["field"] == "category" else m for m in base], "unknown_field"
+    )
     dup = [{**m, "field": "category"} if m["field"] == "channel" else m for m in base]
     fails(dup, "duplicate_field")
     fails(base, "unknown_dataset", dataset="nope")

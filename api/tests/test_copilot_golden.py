@@ -72,9 +72,11 @@ def test_golden_set_in_rules_mode(db, samples, values):
     failures = [(r["id"], r["problems"]) for r in results if not r["ok"]]
     assert not failures
     summary = {row["label"]: (row["matched"], row["total"]) for row in by_label(results)}
+    # Contract §6: without AI nothing is exploratory (free text the matcher cannot route is
+    # not_answerable), so by_label leaves the empty "exploratory" row out in RULES mode.
     assert summary == {
         "verified": (11, 11),
-        "exploratory": (0, 0),
         "blocked": (4, 4),
         "not_answerable": (9, 9),
     }
+    assert not any(r["got"] == "exploratory" for r in results)

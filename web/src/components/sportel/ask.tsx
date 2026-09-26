@@ -9,6 +9,7 @@ import {
   Cpu,
   FileSpreadsheet,
   Loader2,
+  MessageSquareDashed,
   SearchCheck,
   Send,
   ShieldAlert,
@@ -22,7 +23,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useApi } from "@/hooks/use-api";
 import { type AskAnswer, type AskEval, type AskExample, type AskLabel } from "@/lib/api";
 import { ask, getEval, getExamples } from "@/lib/client";
-import { asLocale, formatDateTime, formatIndicatorValue, formatMs, formatUsd, pick } from "@/lib/format";
+import { asLocale, formatCell, formatDateTime, formatIndicatorValue, formatMs, formatUsd, pick, summariseRanges } from "@/lib/format";
 import { ASK_LABEL_TONE, ASK_LABELS } from "@/lib/labels";
 
 import { useSystem } from "./system-context";
@@ -57,6 +58,7 @@ export function LabelStamp({ label, animate = false }: { label: AskLabel; animat
 
 export function AskScreen({ passport }: { passport: string | null }) {
   const t = useTranslations("ask");
+  const tAll = useTranslations();
   const locale = useLocale();
   const examples = useApi("ask:examples", getExamples);
   const evaluation = useApi("ask:eval", getEval);
@@ -169,9 +171,24 @@ export function AskScreen({ passport }: { passport: string | null }) {
             </div>
           </form>
 
-          <div className="answer-zone" aria-live="polite" aria-busy={busy}>
+          <p className="sr-only" aria-live="polite" aria-atomic>
+            {busy
+              ? t("asking")
+              : current
+                ? `${tAll(`labels.${current.answer.label}.name`)}: ${pick(current.answer.answer, locale)}`
+                : ""}
+          </p>
+          <div className="answer-zone" aria-busy={busy}>
             {error ? <ErrorState error={error} /> : null}
-            {!current && !busy && !error && <p className="answer-empty">{t("empty")}</p>}
+            {!current && !busy && !error && (
+              <div className="answer-empty">
+                <MessageSquareDashed aria-hidden />
+                <div>
+                  <strong>{t("emptyTitle")}</strong>
+                  <p>{t("empty")}</p>
+                </div>
+              </div>
+            )}
             {busy && (
               <div className="panel answer-pending">
                 <Loader2 className="spin" aria-hidden />
@@ -321,8 +338,8 @@ function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: Ask
             <table className="data-table compact">
               <thead>
                 <tr>
-                  {a.table.columns.map((c) => (
-                    <th key={c} scope="col">
+                  {a.table.columns.map((c, j) => (
+                    <th key={c} scope="col" className={typeof a.table!.rows[0]?.[j] === "number" ? "numeric" : undefined}>
                       {c}
                     </th>
                   ))}
@@ -333,7 +350,7 @@ function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: Ask
                   <tr key={i}>
                     {row.map((cell, j) => (
                       <td key={j} className={typeof cell === "number" ? "numeric" : ""}>
-                        {cell == null ? "–" : String(cell)}
+                        {formatCell(cell, locale)}
                       </td>
                     ))}
                   </tr>
@@ -354,13 +371,19 @@ function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: Ask
         <div className="answer-block">
           <h3>{t("ask.sources")}</h3>
           <ul className="answer-sources">
-            {a.sources.map((s) => (
-              <li key={`${s.source_id}-${s.rows}`}>
-                <FileSpreadsheet aria-hidden />
-                <span className="lineage-file">{s.filename}</span>
-                <span className="answer-rows">{t("ask.rows", { rows: s.rows })}</span>
-              </li>
-            ))}
+            {a.sources.map((s) => {
+              const ranges = summariseRanges(s.rows);
+              return (
+                <li key={`${s.source_id}-${s.rows}`}>
+                  <FileSpreadsheet aria-hidden />
+                  <span className="lineage-file">{s.filename}</span>
+                  <span className="answer-rows" title={ranges.more > 0 ? s.rows : undefined}>
+                    {t("ask.rows", { rows: ranges.text })}
+                    {ranges.more > 0 && <> {t("passport.rangesMore", { count: ranges.more })}</>}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

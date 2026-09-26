@@ -1,9 +1,13 @@
 /**
- * REPLAY engine: an in-browser stand-in for the Sportel API built from SYNTHETIC
- * fixtures. It implements the same functions as `lib/api.ts` so the gap-to-proof
- * loop (reset → gap → ingest → receipt → verified → tile turns green) can be shown
- * offline. It is only used when the API is unreachable or NEXT_PUBLIC_USE_FIXTURES=1,
- * and the UI always shows a REPLAY badge while it is.
+ * REPLAY engine: an in-browser stand-in for the Sportel API, used only when the API is
+ * unreachable or `NEXT_PUBLIC_USE_FIXTURES=1`, and always badged REPLAY in the header.
+ *
+ * It computes nothing. Every number, preview, receipt and answer is a response the live
+ * API gave over the SYNTHETIC sample exports, recorded by `web/scripts/record-replay.mjs`
+ * into `snapshot.ts`. The engine only keeps the demo state (which exports are loaded,
+ * which recipes are saved, the pinned population basis) and picks the recorded response
+ * that matches it, so the gap-to-proof loop (reset → gap → ingest → receipt → verified →
+ * tile turns green) plays offline with the same numbers as the live API.
  */
 import {
   ApiError,
@@ -17,6 +21,7 @@ import {
   type DeleteRecipesResult,
   type Health,
   type IndicatorBoard,
+  type IndicatorSummary,
   type IngestPreview,
   type LineageRows,
   type LlmCalls,
@@ -27,55 +32,35 @@ import {
   type SampleFile,
   type SourceInfo,
 } from "../api.ts";
-import { answer, EXAMPLES } from "./ask.ts";
-import { DATASETS, PRELOADED, SAMPLES, type DatasetKey } from "./catalog.ts";
+import { routeQuestion } from "./ask.ts";
 import { buildCoverage } from "./coverage.ts";
-import { buildBoard, buildLineage, buildPassport, INDICATORS } from "./indicators.ts";
-import { buildPreview, buildReceipt, defaultMapping, fileSpec, recipeMatch } from "./ingest.ts";
-import type { ReplayState } from "./state.ts";
-import { EVAL, HEALTH, LLM_CALLS } from "./system.ts";
+import { SNAPSHOT } from "./snapshot.ts";
 
-const STORAGE_KEY = "sportel:replay-state:v1";
-const SEED_TIME = "2026-09-26T00:30:00Z";
+// ---------------------------------------------------------------- state
 
-function computableCodes(state: ReplayState): Set<string> {
-  return new Set(
-    INDICATORS.filter((def) => def.datasets.every((d) => state.loaded.has(d))).map((def) => def.code),
-  );
-}
+type Recipe = { id: string; dataset: string; from: string };
 
-function coverageOf(state: ReplayState) {
-  return { computable: computableCodes(state).size, total: INDICATORS.length };
-}
+export type ReplayState = {
+  /** Loaded dataset key → the source that fed it. */
+  loaded: Map<string, SourceInfo>;
+  /** Saved mapping recipes by dataset. */
+  recipes: Map<string, Recipe>;
+  basis: PopulationBasis;
+  previews: Map<string, { sample: string; preview: IngestPreview }>;
+  seq: number;
+};
 
-function unlockedBetween(before: Set<string>, after: Set<string>): LoadReceipt["indicators_unlocked"] {
-  return INDICATORS.filter((def) => after.has(def.code) && !before.has(def.code)).map((def) => ({
-    code: def.code,
-    name: def.name,
-  }));
-}
+const STORAGE_KEY = "sportel:replay-state:v2";
+const CODES = Object.keys(SNAPSHOT.passports.full);
 
-/** Start state after `POST /demo/reset`: requests + budget + population → 6/13. */
 export function initialState(): ReplayState {
-  const state: ReplayState = { loaded: new Map(), recipes: new Map(), basis: "census_2023", previews: new Map(), seq: 0 };
-  PRELOADED.forEach((dataset, i) => {
-    const sample = SAMPLES.find((s) => s.dataset === dataset && s.preload)!;
-    const spec = fileSpec(sample.name)!;
-    const before = computableCodes(state);
-    state.loaded.set(dataset, buildReceipt(spec, {
-      sourceId: `src_seed_${String(i + 1).padStart(2, "0")}`,
-      mapping: defaultMapping(spec),
-      recipe: { saved: false, reused: false, recipe_id: null },
-      unlocked: [],
-      coverage: { computable: 0, total: INDICATORS.length },
-      loadedAt: SEED_TIME,
-    }));
-    const after = computableCodes(state);
-    const receipt = state.loaded.get(dataset)!;
-    receipt.indicators_unlocked = unlockedBetween(before, after);
-    receipt.coverage = coverageOf(state);
-  });
-  return state;
+  return {
+    loaded: new Map(SNAPSHOT.seeds.map((s) => [s.dataset, s])),
+    recipes: new Map(),
+    basis: "census_2023",
+    previews: new Map(),
+    seq: 0,
+  };
 }
 
 let state: ReplayState | null = null;
@@ -94,8 +79,8 @@ function load(): ReplayState {
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as {
-        loaded: [DatasetKey, SourceInfo][];
-        recipes: [DatasetKey, ReplayState["recipes"] extends Map<DatasetKey, infer R> ? R : never][];
+        loaded: [string, SourceInfo][];
+        recipes: [string, Recipe][];
         basis: PopulationBasis;
         seq: number;
       };
@@ -150,12 +135,95 @@ function notFound(what: string): never {
   });
 }
 
-// ---------------------------------------------------------------- endpoints
+// ---------------------------------------------------------------- passports
+
+const isComputable = (code: string, s: ReplayState) =>
+  SNAPSHOT.passports.full[code].required_datasets.every((d) => s.loaded.has(d));
+
+function computableCodes(s: ReplayState): Set<string> {
+  return new Set(CODES.filter((code) => isComputable(code, s)));
+}
+
+const coverageOf = (s: ReplayState) => ({ computable: computableCodes(s).size, total: CODES.length });
+
+/** Dataset of every recorded source id, to relink passports to the source loaded now. */
+const DATASET_OF_SOURCE = new Map(
+  [...SNAPSHOT.seeds, ...SNAPSHOT.sources_full, ...Object.values(SNAPSHOT.receipts)].map((s) => [s.source_id, s.dataset]),
+);
+const DATASET_OF_FILE = new Map(
+  [...SNAPSHOT.seeds, ...SNAPSHOT.sources_full, ...Object.values(SNAPSHOT.receipts)].map((s) => [s.filename, s.dataset]),
+);
+
+/** Point a recorded passport's sources and lineage at the sources loaded in this state. */
+function relink(p: Passport, s: ReplayState): Passport {
+  const current = (sourceId: string) => {
+    const dataset = DATASET_OF_SOURCE.get(sourceId);
+    return dataset ? s.loaded.get(dataset) : undefined;
+  };
+  return {
+    ...p,
+    sources: p.sources.map((src) => {
+      const now = current(src.source_id);
+      return now ? { source_id: now.source_id, filename: now.filename, synthetic: now.synthetic } : src;
+    }),
+    lineage: p.lineage.map((l) => {
+      const now = current(l.source_id);
+      return now ? { ...l, source_id: now.source_id, filename: now.filename, file_hash: now.file_hash } : l;
+    }),
+  };
+}
+
+function passportFor(code: string, s: ReplayState): Passport {
+  if (isComputable(code, s)) {
+    const civil = s.basis === "civil_registry" ? SNAPSHOT.passports.civil_registry[code] : undefined;
+    return relink(civil ?? SNAPSHOT.passports.full[code], s);
+  }
+  return SNAPSHOT.passports.start[code];
+}
+
+function summary(p: Passport): IndicatorSummary {
+  const {
+    formula: _formula,
+    question: _question,
+    sql: _sql,
+    series: _series,
+    lineage: _lineage,
+    required_datasets: _required,
+    checks: _checks,
+    computed_at: _computedAt,
+    ...rest
+  } = p;
+  void [_formula, _question, _sql, _series, _lineage, _required, _checks, _computedAt];
+  return rest;
+}
+
+export function buildBoard(s: ReplayState): IndicatorBoard {
+  const indicators = CODES.map((code) => summary(passportFor(code, s)));
+  const computable = indicators.filter((i) => i.state === "computable").length;
+  const anyEnvelope = [...s.loaded.values()].some((src) => !SNAPSHOT.seeds.some((seed) => seed.source_id === src.source_id));
+  const meta = anyEnvelope ? SNAPSHOT.board.full : SNAPSHOT.board.start;
+  return {
+    pack: meta.pack,
+    as_of: meta.as_of,
+    coverage: { computable, missing: indicators.length - computable, document: 0, national: 0, total: indicators.length },
+    basis: { population: s.basis },
+    indicators,
+  };
+}
+
+// ---------------------------------------------------------------- endpoints: indicators
 
 export async function getHealth(): Promise<Health> {
   await delay(60);
   const s = load();
-  return { ...HEALTH, synthetic: [...s.loaded.values()].some((src) => src.synthetic) };
+  // REPLAY never calls a model, whatever mode the recording API was in.
+  return {
+    ...SNAPSHOT.health,
+    llm: false,
+    mode: "rules",
+    spent_usd: 0,
+    synthetic: [...s.loaded.values()].some((src) => src.synthetic),
+  };
 }
 
 export async function getBoard(pack = "core_kpi"): Promise<IndicatorBoard> {
@@ -166,41 +234,77 @@ export async function getBoard(pack = "core_kpi"): Promise<IndicatorBoard> {
 
 export async function getPassport(code: string): Promise<Passport> {
   await delay(140);
-  return clone(buildPassport(code, load()) ?? notFound(`indicator ${code}`));
+  if (!SNAPSHOT.passports.full[code]) notFound(`indicator ${code}`);
+  return clone(passportFor(code, load()));
 }
 
 export async function getLineage(code: string, limit = 50): Promise<LineageRows> {
   await delay(120);
-  return clone(buildLineage(code, limit, load()) ?? notFound(`indicator ${code}`));
+  const recorded = SNAPSHOT.lineage[code] ?? notFound(`indicator ${code}`);
+  const s = load();
+  if (!isComputable(code, s)) return { code, columns: [], total: 0, rows: [] };
+  const rows = recorded.rows.slice(0, Math.max(0, limit)).map((row) => {
+    const dataset = DATASET_OF_FILE.get(row.source_file);
+    const now = dataset ? s.loaded.get(dataset) : undefined;
+    return now ? { ...row, source_file: now.filename } : row;
+  });
+  return clone({ ...recorded, rows });
 }
+
+export async function getCoverage(pack = "al_smp"): Promise<Coverage> {
+  await delay(160);
+  if (pack !== "al_smp") notFound(`pack ${pack}`);
+  const s = load();
+  return clone(buildCoverage((code) => isComputable(code, s), s.basis));
+}
+
+export async function setPopulationBasis(value: PopulationBasis): Promise<{ ok: true; basis: PopulationBasis }> {
+  await delay(150);
+  const s = load();
+  s.basis = value;
+  save();
+  return { ok: true, basis: value };
+}
+
+// ---------------------------------------------------------------- endpoints: ingest
 
 export async function getDatasets(): Promise<DatasetInfo[]> {
   await delay(80);
   const s = load();
-  return (Object.keys(DATASETS) as DatasetKey[]).map((key) => {
-    const { exportName: _exportName, rows, ...info } = DATASETS[key];
-    void _exportName;
-    const src = s.loaded.get(key);
-    return clone({ ...info, loaded: Boolean(src), sources: src ? 1 : 0, rows: src ? rows : 0 });
-  });
+  return clone(
+    SNAPSHOT.datasets.map((d) => {
+      const src = s.loaded.get(d.key);
+      return { ...d, loaded: Boolean(src), sources: src ? 1 : 0, rows: src?.rows_loaded ?? 0 };
+    }),
+  );
 }
 
 export async function getSamples(): Promise<SampleFile[]> {
   await delay(90);
   const s = load();
-  return SAMPLES.map(({ dataset, hash: _hash, ...sample }) => {
-    void _hash;
-    return { ...sample, loaded: s.loaded.get(dataset)?.filename === sample.name };
-  });
+  return clone(SNAPSHOT.samples.map((sample) => ({ ...sample, loaded: s.loaded.get(sample.dataset_hint)?.filename === sample.name })));
 }
 
-function preview(sampleName: string): IngestPreview {
+function recordedPreview(sample: string, s: ReplayState): IngestPreview {
+  const fresh = SNAPSHOT.previews.fresh[sample] ?? notFound(`sample ${sample}`);
+  const dataset = fresh.dataset?.key;
+  const recipe = dataset ? s.recipes.get(dataset) : undefined;
+  if (recipe?.from === sample && SNAPSHOT.previews.recipe_hit[sample]) {
+    const hit = SNAPSHOT.previews.recipe_hit[sample];
+    return { ...hit, recipe: { ...hit.recipe, recipe_id: recipe.id } };
+  }
+  const drift = SNAPSHOT.previews.drift;
+  if (recipe && drift?.filename === sample) return drift;
+  return fresh;
+}
+
+function preview(sample: string): IngestPreview {
   const s = load();
-  const spec = fileSpec(sampleName) ?? notFound(`sample ${sampleName}`);
+  const recorded = recordedPreview(sample, s);
   s.seq += 1;
-  const previewId = `fx-${s.seq}-${spec.fingerprint}`;
-  const result = buildPreview(spec, previewId, recipeMatch(spec, s.recipes.get(spec.dataset)));
-  s.previews.set(previewId, { preview: result, sample: sampleName });
+  const previewId = `fx-${s.seq}-${recorded.recipe.fingerprint}`;
+  const result = { ...clone(recorded), preview_id: previewId };
+  s.previews.set(previewId, { preview: result, sample });
   save();
   return clone(result);
 }
@@ -210,13 +314,13 @@ export async function previewSample(name: string): Promise<IngestPreview> {
   return preview(name);
 }
 
-/** Only the synthetic sample files can be previewed offline; match by file name. */
+/** Offline, only the synthetic sample files can be previewed; they are matched by file name. */
 export async function previewUpload(file: File): Promise<IngestPreview> {
   await delay(750);
   const norm = file.name.toLowerCase();
   const sample =
-    SAMPLES.find((s) => s.name.toLowerCase() === norm) ??
-    SAMPLES.find((s) => {
+    SNAPSHOT.samples.find((s) => s.name.toLowerCase() === norm) ??
+    SNAPSHOT.samples.find((s) => {
       const stem = s.name.toLowerCase().split("_sintetike")[0];
       return stem.length > 2 && norm.startsWith(stem);
     });
@@ -229,6 +333,16 @@ export async function previewUpload(file: File): Promise<IngestPreview> {
   return preview(sample.name);
 }
 
+function receiptFor(sample: string): LoadReceipt | null {
+  const recorded = SNAPSHOT.receipts[sample];
+  if (recorded) return recorded;
+  const seed = SNAPSHOT.seeds.find((s) => s.filename === sample);
+  if (!seed) return null;
+  const { mapping: _mapping, ...receipt } = seed;
+  void _mapping;
+  return receipt;
+}
+
 export async function commitIngest(body: CommitBody): Promise<LoadReceipt> {
   await delay(900);
   const s = load();
@@ -239,45 +353,52 @@ export async function commitIngest(body: CommitBody): Promise<LoadReceipt> {
       en: "The preview was not found or has expired. Load the file again.",
     });
   }
-  const spec = fileSpec(entry.sample) ?? notFound(`sample ${entry.sample}`);
-  if (body.dataset !== spec.dataset) {
+  const expected = entry.preview.dataset?.key;
+  const info = SNAPSHOT.datasets.find((d) => d.key === body.dataset);
+  if (!info || body.dataset !== expected) {
     throw new ApiError(422, "dataset_mismatch", "dataset mismatch", {
-      sq: `Ky skedar përputhet me grupin '${spec.dataset}', jo '${body.dataset}'.`,
-      en: `This file matches the '${spec.dataset}' dataset, not '${body.dataset}'.`,
+      sq: `Ky skedar përputhet me grupin '${expected ?? "?"}', jo '${body.dataset}'.`,
+      en: `This file matches the '${expected ?? "?"}' dataset, not '${body.dataset}'.`,
     });
   }
+  const mapped = new Set(body.mapping.map((m) => m.field).filter(Boolean));
+  const unmapped = info.fields.filter((f) => f.required && !mapped.has(f.key));
+  if (unmapped.length > 0) {
+    throw new ApiError(422, "required_fields_unmapped", "required fields unmapped", {
+      sq: `Mungojnë fusha të detyrueshme: ${unmapped.map((f) => f.label.sq).join(", ")}. Zgjidhni kolonën për secilën.`,
+      en: `Required fields are not mapped: ${unmapped.map((f) => f.label.en).join(", ")}. Choose a column for each.`,
+    });
+  }
+  const recorded = receiptFor(entry.sample) ?? notFound(`receipt ${entry.sample}`);
+
   const before = computableCodes(s);
-  const reused = entry.preview.recipe.hit;
-  let recipeId = entry.preview.recipe.recipe_id;
-  let saved = false;
-  if (body.save_recipe && !reused) {
-    recipeId = `rcp_${spec.dataset}_${String(s.seq).padStart(2, "0")}`;
-    s.recipes.set(spec.dataset, {
-      id: recipeId,
-      dataset: spec.dataset,
-      fingerprint: spec.fingerprint,
-      from_filename: spec.sample,
-      columns: body.mapping.map((m) => m.column),
-    });
-    saved = true;
-  }
-  s.seq += 1;
-  const receipt = buildReceipt(spec, {
-    sourceId: `src_${spec.dataset}_${String(s.seq).padStart(2, "0")}`,
-    mapping: body.mapping,
-    recipe: { saved, reused, recipe_id: saved || reused ? recipeId : null },
-    unlocked: [],
+  const hit = entry.preview.recipe.hit;
+  const saved = Boolean(body.save_recipe) && !hit;
+  const recipeId = hit
+    ? entry.preview.recipe.recipe_id
+    : saved
+      ? (recorded.recipe.recipe_id ?? `rcp-${body.dataset}-${s.seq}`)
+      : null;
+  if (saved && recipeId) s.recipes.set(body.dataset, { id: recipeId, dataset: body.dataset, from: entry.sample });
+
+  const receipt: LoadReceipt = {
+    ...clone(recorded),
+    recipe: { saved, reused: hit, recipe_id: recipeId },
+    loaded_at: new Date().toISOString(),
+    indicators_unlocked: [],
     coverage: coverageOf(s),
-    loadedAt: new Date().toISOString(),
-  });
-  s.loaded.set(spec.dataset, receipt);
-  receipt.indicators_unlocked = unlockedBetween(before, computableCodes(s));
+  };
+  s.loaded.set(body.dataset, { ...receipt, mapping: body.mapping });
+  const after = computableCodes(s);
+  receipt.indicators_unlocked = CODES.filter((code) => after.has(code) && !before.has(code)).map((code) => ({
+    code,
+    name: SNAPSHOT.passports.full[code].name,
+  }));
   receipt.coverage = coverageOf(s);
+  s.loaded.set(body.dataset, { ...receipt, mapping: body.mapping });
   s.previews.delete(body.preview_id);
   save();
-  const { mapping: _mapping, ...loadReceipt } = receipt;
-  void _mapping;
-  return clone(loadReceipt);
+  return clone(receipt);
 }
 
 export async function getSources(): Promise<SourceInfo[]> {
@@ -308,18 +429,32 @@ export function recipeCount(): number {
   return load().recipes.size;
 }
 
-export async function getCoverage(pack = "al_smp"): Promise<Coverage> {
-  await delay(160);
-  if (pack !== "al_smp") notFound(`pack ${pack}`);
-  return buildCoverage();
+// ---------------------------------------------------------------- endpoints: ask + system
+
+function answerFor(code: string, s: ReplayState, exampleId?: string): AskAnswer {
+  if (!isComputable(code, s)) {
+    return (exampleId && SNAPSHOT.ask.examples_start[exampleId]) || SNAPSHOT.ask.start[code];
+  }
+  if (s.basis === "civil_registry" && SNAPSHOT.ask.civil_registry[code]) return SNAPSHOT.ask.civil_registry[code];
+  return (exampleId && SNAPSHOT.ask.examples_full[exampleId]) || SNAPSHOT.ask.full[code];
 }
 
-export async function setPopulationBasis(value: PopulationBasis): Promise<{ ok: true; basis: PopulationBasis }> {
-  await delay(150);
-  const s = load();
-  s.basis = value;
-  save();
-  return { ok: true, basis: value };
+export function answer(s: ReplayState, question: string, exampleId?: string): AskAnswer {
+  const example = SNAPSHOT.examples.find((e) => e.id === exampleId);
+  let recorded: AskAnswer;
+  if (example?.passport_code) recorded = answerFor(example.passport_code, s, example.id);
+  else if (example) recorded = SNAPSHOT.ask.examples_start[example.id];
+  else {
+    const route = routeQuestion(question);
+    if (route.kind === "passport") recorded = answerFor(route.code, s);
+    else if (route.kind === "blocked") {
+      const blocked = SNAPSHOT.examples.find((e) => e.kind === "blocked");
+      recorded = (blocked && SNAPSHOT.ask.examples_start[blocked.id]) || SNAPSHOT.ask.free_text.write;
+    } else if (route.kind === "write") recorded = SNAPSHOT.ask.free_text.write;
+    else recorded = SNAPSHOT.ask.free_text.unknown;
+  }
+  const text = question.trim() || recorded.question;
+  return { ...clone(recorded), question: text, ...(recorded.sql === recorded.question ? { sql: text } : {}) };
 }
 
 export async function ask(body: AskBody): Promise<AskAnswer> {
@@ -329,15 +464,16 @@ export async function ask(body: AskBody): Promise<AskAnswer> {
 
 export async function getExamples(): Promise<AskExample[]> {
   await delay(80);
-  return clone(EXAMPLES);
+  return clone(SNAPSHOT.examples);
 }
 
 export async function getEval(): Promise<AskEval> {
   await delay(80);
-  return clone(EVAL);
+  if (!SNAPSHOT.eval) notFound("evaluation");
+  return clone(SNAPSHOT.eval);
 }
 
 export async function getLlmCalls(): Promise<LlmCalls> {
   await delay(90);
-  return clone(LLM_CALLS);
+  return { spent_usd: 0, budget_usd: SNAPSHOT.llm_calls.budget_usd, mode: "rules", calls: [] };
 }

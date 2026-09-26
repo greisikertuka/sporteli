@@ -9,6 +9,7 @@ from app.copilot.router import router as copilot_router
 from app.indicators.router import router as indicators_router
 from app.ingest.router import router as ingest_router
 from app.llm.client import get_llm
+from app.meta.errors import install_error_handlers
 from app.meta.router import router as meta_router
 from app.warehouse.db import close_db, get_db
 
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    install_error_handlers(app)
     for router in (meta_router, ingest_router, indicators_router, copilot_router):
         app.include_router(router, prefix=API_PREFIX)
     return app

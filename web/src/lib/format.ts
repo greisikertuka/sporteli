@@ -226,12 +226,33 @@ export function formatDateTime(iso: string | null | undefined, locale: string): 
   return `${date.getDate()} ${m} ${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** `2026-08-31` → "31 gusht 2026"; a month (`2026-08`, "data up to") → its last day. */
 export function formatDate(iso: string | null | undefined, locale: string): string {
   if (!iso) return "–";
-  const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  const ymd = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(iso);
   if (!ymd) return iso;
-  return `${Number(ymd[3])} ${monthLabel(Number(ymd[2]), locale, "long")} ${ymd[1]}`;
+  const [, year, month, day] = ymd;
+  const lastDay = new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+  return `${day ? Number(day) : lastDay} ${monthLabel(Number(month), locale, "long")} ${year}`;
+}
+
+/**
+ * Long lineage lists ("4, 6–12, 14–287, …" can run to hundreds of ranges): the first `max`
+ * ranges for display, plus how many more there are. `all` keeps every range.
+ */
+export function summariseRanges(ranges: string | null | undefined, max = 4): { text: string; more: number; all: string[] } {
+  const all = (ranges ?? "").split(/\s*,\s*/).filter(Boolean);
+  return { text: all.slice(0, max).join(", "), more: Math.max(0, all.length - max), all };
 }
 
 /** Percentage 0–100 → share of a bar, clamped. */
 export const clampPct = (value: number) => Math.max(0, Math.min(100, value));
+
+/** A table cell from a query result or a source row: numbers in the locale's format, as given. */
+export function formatCell(value: string | number | null | undefined, locale: string): string {
+  if (value == null) return "–";
+  if (typeof value !== "number") return value;
+  if (!Number.isFinite(value)) return String(value);
+  const decimals = Number.isInteger(value) ? 0 : Math.min(3, (String(value).split(".")[1] ?? "").length);
+  return formatNumber(value, locale, decimals);
+}

@@ -14,7 +14,7 @@ import { AlertDialog } from "radix-ui";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 
-import { useApi } from "@/hooks/use-api";
+import { useApi, useReducedMotion } from "@/hooks/use-api";
 import type { IngestPreview, LoadReceipt as Receipt, SampleFile, SourceInfo } from "@/lib/api";
 import {
   commitIngest,
@@ -34,6 +34,8 @@ import { LoadReceipt } from "./load-receipt";
 import { CodeChip, ErrorState, PageHeader, Section, SyntheticMark, ToneChip } from "./ui";
 
 const ACCEPT = ".csv,.xlsx,.xls";
+/** Sample labels already read "Zarfi 1 · …"; the card prints the envelope number itself. */
+const ENVELOPE_PREFIX = /^(zarfi|envelope)\s*\d+\s*[·:–-]\s*/i;
 const OK_EXT = /\.(csv|xlsx|xls)$/i;
 
 type Phase =
@@ -55,13 +57,17 @@ export function IngestScreen({ wanted }: { wanted: string | null }) {
   const [committing, setCommitting] = useState(false);
   const [stepsDoneFor, setStepsDoneFor] = useState<string | null>(null);
   const workRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  const scrollToWork = useCallback(() => {
+    requestAnimationFrame(() => workRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" }));
+  }, [reduced]);
 
   const wantedInfo = datasets.data?.find((d) => d.key === wanted);
 
   const begin = useCallback(async (label: string, run: () => Promise<IngestPreview>) => {
     setPhase({ kind: "reading", file: label });
     setStepsDoneFor(null);
-    requestAnimationFrame(() => workRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    scrollToWork();
     try {
       const preview = await run();
       setRows(initialRows(preview));
@@ -71,7 +77,7 @@ export function IngestScreen({ wanted }: { wanted: string | null }) {
     } catch (error) {
       setPhase({ kind: "error", error, file: label });
     }
-  }, []);
+  }, [scrollToWork]);
 
   const commit = async () => {
     if (phase.kind !== "preview" || !dataset) return;
@@ -84,7 +90,7 @@ export function IngestScreen({ wanted }: { wanted: string | null }) {
         save_recipe: saveRecipe,
       });
       setPhase({ kind: "done", receipt });
-      requestAnimationFrame(() => workRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      scrollToWork();
     } catch (error) {
       setPhase({ kind: "error", error, file: phase.preview.filename });
     } finally {
@@ -124,7 +130,20 @@ export function IngestScreen({ wanted }: { wanted: string | null }) {
         />
       </div>
 
-      <div ref={workRef} className="ingest-work" aria-live="polite">
+      <p className="sr-only" aria-live="polite" aria-atomic>
+        {phase.kind === "reading"
+          ? t("reading", { file: phase.file })
+          : phase.kind === "preview" && stepsDoneFor === phase.preview.preview_id
+            ? t("liveReady", { steps: phase.preview.steps.length })
+            : phase.kind === "done"
+              ? t("liveDone", {
+                  rows: formatNumber(phase.receipt.rows_loaded, locale),
+                  computable: phase.receipt.coverage.computable,
+                  total: phase.receipt.coverage.total,
+                })
+              : ""}
+      </p>
+      <div ref={workRef} className="ingest-work" aria-busy={phase.kind === "reading" || committing}>
         {phase.kind === "reading" && (
           <div className="panel reading-panel">
             <Loader2 className="spin" aria-hidden />
@@ -278,7 +297,7 @@ function SampleShelf({
                 </span>
                 <span className="envelope-body">
                   <span className="envelope-kicker">{t("envelope", { n: s.envelope ?? 0 })}</span>
-                  <span className="envelope-label">{pick(s.label, locale)}</span>
+                  <span className="envelope-label">{pick(s.label, locale).replace(ENVELOPE_PREFIX, "")}</span>
                   <span className="envelope-file" id={`env-${s.envelope}`}>
                     {s.name}
                   </span>
@@ -350,8 +369,12 @@ function SourcesSection() {
             type="button"
             className="civic-button ghost"
             onClick={async () => {
-              const r = await deleteRecipes();
-              setNotice(t("recipesDeleted", { count: r.deleted }));
+              try {
+                const r = await deleteRecipes();
+                setNotice(t("recipesDeleted", { count: r.deleted }));
+              } catch {
+                setNotice(t("actionError"));
+              }
             }}
           >
             <Trash2 aria-hidden />
@@ -415,7 +438,7 @@ function ResetDemo({ onDone }: { onDone: (message: string) => void }) {
   return (
     <AlertDialog.Root>
       <AlertDialog.Trigger asChild>
-        <button type="button" className="civic-button danger">
+        <button type="button" className="civic-button">
           <RotateCcw aria-hidden />
           {t("reset")}
         </button>
@@ -441,6 +464,8 @@ function ResetDemo({ onDone }: { onDone: (message: string) => void }) {
                   try {
                     const r = await resetDemo();
                     onDone(t("resetDone", { computable: r.coverage.computable, total: r.coverage.total }));
+                  } catch {
+                    onDone(t("actionError"));
                   } finally {
                     setBusy(false);
                   }

@@ -70,3 +70,30 @@ def test_settings_parse_cors_origins(monkeypatch):
     assert "http://localhost:3100" in s.cors_origins
     assert s.demo_reset_enabled is True
     assert s.samples_path.name == "samples" and s.samples_path.is_absolute()
+
+
+def _assert_contract_error(res, status: int, code: str) -> dict:
+    assert res.status_code == status, res.text
+    detail = res.json()["detail"]
+    assert detail["code"] == code
+    assert set(detail["message"]) == {"sq", "en"} and all(detail["message"].values())
+    return detail
+
+
+def test_validation_errors_use_the_contract_shape(client):
+    detail = _assert_contract_error(
+        client.post("/api/v1/ingest/commit", json={}), 422, "invalid_request"
+    )
+    assert "preview_id" in detail["message"]["en"]
+    assert {tuple(e["loc"]) for e in detail["errors"]} >= {("body", "preview_id")}
+    _assert_contract_error(client.post("/api/v1/ingest/preview"), 422, "invalid_request")
+    _assert_contract_error(
+        client.get("/api/v1/indicators/REQ-01/lineage", params={"limit": 0}), 422, "invalid_request"
+    )
+
+
+def test_routing_errors_use_the_contract_shape(client):
+    _assert_contract_error(client.get("/api/v1/no-such-endpoint"), 404, "not_found")
+    _assert_contract_error(client.put("/api/v1/health"), 405, "method_not_allowed")
+    # errors raised by the app keep their own code
+    _assert_contract_error(client.get("/api/v1/indicators/NOPE"), 404, "unknown_indicator")

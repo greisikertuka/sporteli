@@ -335,7 +335,12 @@ def evaluate_pack(
         with as_of_views(con) as views:
             return [
                 evaluate_passport(
-                    p, con, basis=basis, loaded=loaded, meta=meta, views=views,
+                    p,
+                    con,
+                    basis=basis,
+                    loaded=loaded,
+                    meta=meta,
+                    views=views,
                     acks=acks.get(p.code),
                 )
                 for p in pk.passports
@@ -347,8 +352,13 @@ def evaluate_pack(
                 (
                     i,
                     evaluate_passport(
-                        pk.passports[i], cur, basis=basis, loaded=loaded, meta=meta,
-                        views=views, acks=acks.get(pk.passports[i].code),
+                        pk.passports[i],
+                        cur,
+                        basis=basis,
+                        loaded=loaded,
+                        meta=meta,
+                        views=views,
+                        acks=acks.get(pk.passports[i].code),
                     ),
                 )
                 for i in chunk
@@ -375,7 +385,12 @@ def evaluate_one(con: duckdb.DuckDBPyConnection, code: str, pack: str = "core_kp
     loaded = reg.loaded_datasets(con, p.required_datasets)
     with as_of_views(con) as views:
         return evaluate_passport(
-            p, con, basis=basis, loaded=loaded, meta=source_meta(con), views=views,
+            p,
+            con,
+            basis=basis,
+            loaded=loaded,
+            meta=source_meta(con),
+            views=views,
             acks=acceptances(con).get(p.code),
         )
 

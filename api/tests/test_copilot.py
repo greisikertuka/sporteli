@@ -149,6 +149,28 @@ def test_matcher_does_not_over_answer(question):
     assert match_passport(question).best is None
 
 
+@pytest.mark.parametrize(
+    "question", ["Sa punonjës ka bashkia?", "How many staff does the municipality have?"]
+)
+def test_matcher_does_not_guess_between_tied_passports(question):
+    # "how many staff" fits staff per 1,000 residents and staff turnover equally well:
+    # answering either would answer a different question.
+    res = match_passport(question)
+    assert res.best is None and res.ambiguous
+    assert {m.code for m in res.candidates[:2]} == {"HR-01", "HR-02"}
+
+
+def test_ambiguous_question_offline_names_both_indicators(start):
+    from app.copilot import service
+
+    a = service._offline(
+        "How many staff?", related=service.get_passport("HR-02"), also=service.get_passport("HR-01")
+    )
+    assert a["label"] == "not_answerable" and a["value"] is None
+    assert "fits two indicators" in a["answer"]["en"] and "turnover" in a["answer"]["en"]
+    assert "dy tregues" in a["answer"]["sq"]
+
+
 def test_terms_fold_inflections_and_languages():
     assert "REQUEST" in terms("kërkesave") and "REQUEST" in terms("requests")
     assert terms("zbatimi") == terms("zbatuar") == ["EXEC"]

@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useReducedMotion } from "@/hooks/use-api";
 import type { IndicatorBoard, IndicatorState, IndicatorSummary, PopulationBasis } from "@/lib/api";
 import { exportXlsxUrl, openDataCsvUrl, setPopulationBasis } from "@/lib/client";
+import { downloadReplayCsv } from "@/lib/replay-export";
 import { formatDate, formatIndicatorValue, formatTarget, pick } from "@/lib/format";
 import {
   groupIndicatorsByArea,
@@ -90,34 +91,6 @@ function CountUp({ from, to }: { from: number; to: number }) {
   return <>{shown}</>;
 }
 
-/** Build the REPLAY-only CSV (the live API serves the real .xlsx with the Burimi column). */
-function replayCsv(board: IndicatorBoard, locale: string) {
-  const header = ["Kodi", "Treguesi", "Vlera", "Njësia", "Periudha", "Gjendja", "Objektivi", "Burimi", "Versioni", "Baza"];
-  const rows = board.indicators.map((i) => [
-    i.code,
-    pick(i.name, locale),
-    i.value == null ? "" : String(i.value),
-    pick(i.unit_label, locale),
-    i.period ?? "",
-    i.state,
-    i.target == null ? "" : String(i.target),
-    i.state === "computable"
-      ? i.sources.map((s) => s.filename).join(" | ")
-      : `MUNGON: ${i.missing.map((m) => `${pick(m.name, locale)} (${pick(m.owner, locale)})`).join(" | ")}`,
-    i.version,
-    i.basis ?? "",
-  ]);
-  const cell = (v: string) => (/[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "sportel-core_kpi-REPLAY-SINTETIKE.csv";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 export function Board() {
   const t = useTranslations();
   const locale = useLocale();
@@ -160,7 +133,7 @@ export function Board() {
         actions={
           <>
             {replay.replay ? (
-              <button type="button" className="civic-button primary" onClick={() => replayCsv(data, locale)} title={t("board.downloadReplayHint")}>
+              <button type="button" className="civic-button primary" onClick={() => downloadReplayCsv(data, locale)} title={t("board.downloadReplayHint")}>
                 <Download aria-hidden />
                 {t("board.downloadReplayCsv")}
               </button>

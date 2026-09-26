@@ -168,6 +168,10 @@ def terms(text: str) -> list[str]:
 
 MATCH_THRESHOLD = 0.62
 """Minimum score to route to a passport."""
+AMBIGUITY_MARGIN = 0.05
+"""If the runner-up is this close to the best passport, the question is ambiguous and is not
+routed (e.g. "how many staff do we have?" fits staff per 1,000 residents and staff turnover
+equally): guessing would answer a different question. Real phrasings win by at least 0.10."""
 UNKNOWN_WEIGHT = 2.2
 """Weight of a question term that no passport phrasing uses (penalises unrelated detail)."""
 
@@ -220,6 +224,8 @@ class MatchResult:
     terms: list[str]
     unknown: list[str]
     """Question terms that no passport phrasing uses."""
+    ambiguous: bool = False
+    """Two passports clear the threshold within ``AMBIGUITY_MARGIN``: ``best`` is None."""
 
 
 def _weight(index: Index, tm: str) -> float:
@@ -250,7 +256,15 @@ def match_passport(question: str, pack: str = "core_kpi") -> MatchResult:
             scored.append(Match(entry.code, round(score, 4), round(coverage, 4), round(dice, 4)))
     scored.sort(key=lambda m: m.score, reverse=True)
     best = scored[0] if scored and scored[0].score >= MATCH_THRESHOLD else None
-    return MatchResult(best, scored, q, unknown)
+    ambiguous = (
+        best is not None
+        and len(scored) > 1
+        and scored[1].score >= MATCH_THRESHOLD
+        and best.score - scored[1].score < AMBIGUITY_MARGIN
+    )
+    if ambiguous:
+        best = None
+    return MatchResult(best, scored, q, unknown, ambiguous)
 
 
 # --------------------------------------------------------------------------------------------

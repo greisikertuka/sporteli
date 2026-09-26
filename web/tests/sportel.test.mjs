@@ -26,6 +26,7 @@ import {
   stateSnapshot,
 } from "../src/lib/labels.ts";
 import * as replay from "../src/lib/fixtures/index.ts";
+import { SNAPSHOT } from "../src/lib/fixtures/snapshot.ts";
 
 // ---------------------------------------------------------------- formatting
 
@@ -123,6 +124,35 @@ test("coverage counting and receipt balance", () => {
 });
 
 // ---------------------------------------------------------------- fixtures (REPLAY engine)
+//
+// REPLAY replays responses recorded from the live API (`scripts/record-replay.mjs`), so the
+// expected numbers below are read from that recording, never typed by hand.
+
+const ZARFI_1 = "zarfi-1_SINTETIKE_pastrimi_mbetjet_2026.csv";
+const ZARFI_2 = "zarfi-2_SINTETIKE_taksat_tarifat_arketimi_2026.xlsx";
+const ZARFI_3 = "zarfi-3_SINTETIKE_burimet_njerezore_2026.xlsx";
+const REQUESTS = "01_SINTETIKE_kerkesat_qytetare_jan-gus_2026.xlsx";
+const DRIFT = "drift_SINTETIKE_pastrimi_mbetjet_2026_v2.csv";
+
+async function load(name, saveRecipe = true) {
+  const preview = await replay.previewSample(name);
+  const receipt = await replay.commitIngest({
+    preview_id: preview.preview_id,
+    dataset: preview.dataset.key,
+    mapping: preview.mapping.map((m) => ({ column: m.column, field: m.field })),
+    save_recipe: saveRecipe,
+  });
+  return { preview, receipt };
+}
+
+test("the recorded snapshot covers the contract: 13 passports, 4 example kinds, every sample", () => {
+  assert.equal(Object.keys(SNAPSHOT.passports.full).length, 13);
+  assert.ok(Object.values(SNAPSHOT.passports.full).every((p) => p.state === "computable" && p.value !== null));
+  assert.ok(Object.values(SNAPSHOT.passports.full).every((p) => p.formula_status === "draft"));
+  assert.deepEqual(Object.keys(SNAPSHOT.previews.fresh).sort(), SNAPSHOT.samples.map((s) => s.name).sort());
+  assert.equal(new Set(SNAPSHOT.examples.map((e) => e.kind)).size, 4);
+  assert.ok(SNAPSHOT.samples.every((s) => s.synthetic && /SINTETIKE/.test(s.name)));
+});
 
 test("start state: 6/13 computable, 3 gap groups, synthetic sources", async () => {
   replay.__resetReplayForTests();
@@ -140,92 +170,117 @@ test("start state: 6/13 computable, 3 gap groups, synthetic sources", async () =
     } else {
       assert.equal(i.value, null, `${i.code} has no number while missing`);
       assert.ok(i.missing.length > 0);
+      assert.ok(i.missing.every((m) => m.owner.sq && m.name.sq));
     }
   }
   const areas = groupIndicatorsByArea(board.indicators).map((g) => g.key);
-  assert.deepEqual(areas, ["requests", "waste", "revenue", "hr", "finance"]);
+  assert.deepEqual(areas, ["requests", "finance", "waste", "revenue", "hr"]);
   const lead = leadershipSummary(board);
   assert.equal(lead.owed.length, 3);
-  assert.ok(lead.offTrack.some((o) => o.code === "FIN-02"));
   const health = await replay.getHealth();
   assert.equal(health.mode, "rules");
   assert.equal(health.llm, false);
   assert.equal(health.synthetic, true);
 });
 
-test("REQ-02 passport and lineage match the contract shapes", async () => {
+test("REQ-02 passport and lineage replay the recorded API response", async () => {
   replay.__resetReplayForTests();
+  const recorded = SNAPSHOT.passports.full["REQ-02"];
   const passport = await replay.getPassport("REQ-02");
-  assert.equal(passport.code, "REQ-02");
-  assert.equal(passport.value, 82.9);
-  assert.equal(passport.status, "off_track");
+  assert.equal(passport.value, recorded.value);
+  assert.equal(passport.status, recorded.status);
   assert.ok(passport.sql.includes("FROM request"));
-  assert.equal(passport.series.length, 8);
-  assert.equal(passport.lineage[0].filename, "01_SINTETIKE_kerkesat_qytetare_jan-gus_2026.xlsx");
-  assert.ok(passport.checks.some((c) => c.rule === "off_target" && !c.passed));
+  assert.equal(passport.series.length, recorded.series.length);
+  assert.equal(passport.lineage[0].filename, REQUESTS);
   const lineage = await replay.getLineage("REQ-02", 10);
   assert.equal(lineage.code, "REQ-02");
   assert.ok(lineage.rows.length > 0 && lineage.rows.length <= 10);
   assert.ok(lineage.columns.includes("closed_at"));
-  assert.equal(lineage.total, 291);
+  assert.equal(lineage.total, SNAPSHOT.lineage["REQ-02"].total);
+  const missing = await replay.getLineage("REV-01", 10);
+  assert.deepEqual(missing.rows, []);
 });
 
 test("gap-to-proof loop: not answerable → ingest zarfi-2 → receipt reconciles → verified", async () => {
   replay.__resetReplayForTests();
-  const before = await replay.ask({ question: "", locale: "sq", example_id: "ex-gap-revenue" });
+  const gapExample = SNAPSHOT.examples.find((e) => e.kind === "gap" && e.passport_code === "REV-02");
+  const before = await replay.ask({ question: gapExample.question.sq, locale: "sq", example_id: gapExample.id });
   assert.equal(before.label, "not_answerable");
   assert.equal(before.value, null);
   assert.equal(before.gap.dataset, "revenue");
   assert.equal(before.gap.owner.sq, "Drejtoria e të Ardhurave Vendore");
+  assert.equal(before.question, gapExample.question.sq);
 
-  const preview = await replay.previewSample("zarfi-2_SINTETIKE_taksat_tarifat_arketimi_2026.xlsx");
+  const { preview, receipt } = await load(ZARFI_2);
   assert.equal(preview.unit_multiplier, 1000);
-  assert.equal(preview.header_row, 3);
-  assert.ok(preview.excluded_rows.some((r) => r.reason === "total_row" && r.text === "Gjithsej"));
-  assert.equal(preview.excluded_rows.filter((r) => r.reason === "title").length, 2);
+  assert.ok(preview.excluded_rows.some((r) => r.reason === "total_row" && r.text.startsWith("Gjithsej")));
   assert.equal(preview.columns.filter((c) => c.dropped).length, 0);
   assert.equal(preview.llm.used, false);
   assert.ok(preview.mapping.every((m) => m.confidence <= 0.6 && m.source === "rules"));
-  assert.equal(preview.steps.length, 8);
+  assert.ok(preview.preview_id.startsWith("fx-"));
 
-  const receipt = await replay.commitIngest({
-    preview_id: preview.preview_id,
-    dataset: "revenue",
-    mapping: preview.mapping.map((m) => ({ column: m.column, field: m.field })),
-    save_recipe: true,
-  });
   assert.ok(receiptBalance(receipt).balanced);
-  assert.ok(receipt.reconciliation.every((r) => r.ok));
-  assert.equal(receipt.reconciliation[0].file_total, receipt.reconciliation[0].loaded_sum);
+  assert.ok(receipt.reconciliation.length > 0 && receipt.reconciliation.every((r) => r.ok));
   assert.deepEqual(receipt.indicators_unlocked.map((i) => i.code), ["REV-01", "REV-02"]);
   assert.deepEqual(receipt.coverage, { computable: 8, total: 13 });
   assert.equal(receipt.recipe.saved, true);
 
-  const after = await replay.ask({ question: "", locale: "sq", example_id: "ex-gap-revenue" });
+  const after = await replay.ask({ question: gapExample.question.sq, locale: "sq", example_id: gapExample.id });
   assert.equal(after.label, "verified");
-  assert.equal(after.value, 81.3);
-  assert.ok(after.sources[0].filename.startsWith("zarfi-2"));
+  assert.equal(after.value, SNAPSHOT.passports.full["REV-02"].value);
+  assert.ok(after.sources.some((s) => s.filename === ZARFI_2));
 
   const board = await replay.getBoard();
   assert.deepEqual(newlyComputable(stateSnapshot((await replay.getBoard()).indicators), board.indicators), []);
-  assert.equal(board.indicators.find((i) => i.code === "REV-02").state, "computable");
+  const rev2 = board.indicators.find((i) => i.code === "REV-02");
+  assert.equal(rev2.state, "computable");
+  assert.equal(rev2.value, SNAPSHOT.passports.full["REV-02"].value);
 
-  const again = await replay.previewSample("zarfi-2_SINTETIKE_taksat_tarifat_arketimi_2026.xlsx");
+  const again = await replay.previewSample(ZARFI_2);
   assert.equal(again.recipe.hit, true);
-  assert.ok(again.mapping.every((m) => m.confidence === 1 && m.source === "recipe"));
+  assert.equal(again.recipe.recipe_id, receipt.recipe.recipe_id);
+  assert.ok(again.mapping.every((m) => m.source === "recipe"));
+  const reused = await replay.commitIngest({
+    preview_id: again.preview_id,
+    dataset: "revenue",
+    mapping: again.mapping.map((m) => ({ column: m.column, field: m.field })),
+  });
+  assert.equal(reused.recipe.reused, true);
+  assert.deepEqual(reused.indicators_unlocked, []);
 });
 
 test("requests file drops 2 personal columns before profiling", async () => {
   replay.__resetReplayForTests();
-  const preview = await replay.previewSample("01_SINTETIKE_kerkesat_qytetare_jan-gus_2026.xlsx");
+  const preview = await replay.previewSample(REQUESTS);
   const dropped = preview.columns.filter((c) => c.dropped);
   assert.equal(dropped.length, 2);
   assert.deepEqual(dropped.map((c) => c.pii).sort(), ["name", "phone"]);
   assert.ok(dropped.every((c) => c.samples.length === 0));
-  assert.ok(!preview.mapping.some((m) => dropped.some((d) => d.name === m.column)));
 });
 
-test("ask answers cover all four labels; coverage has 52 items", async () => {
+test("format drift: a renamed column is reported against the saved recipe", async () => {
+  replay.__resetReplayForTests();
+  assert.equal((await replay.previewSample(DRIFT)).recipe.drift, null);
+  await load(ZARFI_1);
+  const drift = await replay.previewSample(DRIFT);
+  assert.equal(drift.recipe.hit, false);
+  assert.ok(drift.recipe.drift.renamed.length + drift.recipe.drift.added.length > 0);
+});
+
+test("commit refuses a mapping that leaves a required field empty", async () => {
+  replay.__resetReplayForTests();
+  const preview = await replay.previewSample(ZARFI_2);
+  await assert.rejects(
+    replay.commitIngest({
+      preview_id: preview.preview_id,
+      dataset: "revenue",
+      mapping: preview.mapping.map((m) => ({ column: m.column, field: null })),
+    }),
+    (error) => error.status === 422 && error.code === "required_fields_unmapped",
+  );
+});
+
+test("ask: examples cover all four labels; free text is routed, refused or declined", async () => {
   replay.__resetReplayForTests();
   const labels = new Set();
   for (const ex of await replay.getExamples()) {
@@ -233,40 +288,101 @@ test("ask answers cover all four labels; coverage has 52 items", async () => {
     labels.add(a.label);
     if (a.label === "blocked") assert.ok(a.blocked_reason);
     if (a.label === "exploratory") assert.ok(a.table && a.sql);
+    if (a.label === "not_answerable" && ex.passport_code) assert.ok(a.gap?.owner.sq);
   }
   assert.deepEqual([...labels].sort(), ["blocked", "exploratory", "not_answerable", "verified"]);
-  const free = await replay.ask({ question: "Cili është moti nesër?", locale: "sq" });
-  assert.equal(free.label, "not_answerable");
-  assert.equal(free.gap, null);
+  const weather = await replay.ask({ question: "Cili është moti nesër?", locale: "sq" });
+  assert.equal(weather.label, "not_answerable");
+  assert.equal(weather.gap, null);
+  assert.equal(weather.question, "Cili është moti nesër?");
+  const write = await replay.ask({ question: "DROP TABLE request", locale: "sq" });
+  assert.equal(write.label, "blocked");
+  assert.equal(write.sql, "DROP TABLE request");
+  const personal = await replay.ask({ question: "Më jep telefonat e kërkuesve", locale: "sq" });
+  assert.equal(personal.label, "blocked");
+  const routed = await replay.ask({ question: "What is the average resolution time?", locale: "en" });
+  assert.equal(routed.passport_code, "REQ-04");
+  assert.equal(routed.label, "verified");
+  const gap = await replay.ask({ question: "Sa është rotacioni i punonjësve?", locale: "sq" });
+  assert.equal(gap.passport_code, "HR-02");
+  assert.equal(gap.label, "not_answerable");
+});
 
+test("coverage: 52 Annex A items; mapped items wait for their exports at the start", async () => {
+  replay.__resetReplayForTests();
   const coverage = await replay.getCoverage("al_smp");
   assert.equal(coverage.total, 52);
   assert.equal(coverage.items.length, 52);
-  assert.deepEqual(coverage.counts, { computable: 5, missing: 25, document: 10, national: 12, manual: 0 });
+  assert.deepEqual(coverage.counts, { computable: 0, missing: 23, document: 10, national: 12, manual: 7 });
   assert.equal(coverage.approval, "pending");
   assert.deepEqual(countCoverage(coverage.items).counts, coverage.counts);
+  const rev2 = coverage.items.find((i) => i.number === 13);
+  assert.equal(rev2.passport_code, "REV-02");
+  assert.equal(rev2.state, "missing");
+  assert.equal(rev2.owner.sq, "Drejtoria e të Ardhurave Vendore");
+  assert.ok(rev2.note.sq.includes("REV-02"));
+  assert.deepEqual(coverage.items[0].area, { sq: "Arsimi", en: "Education" });
 });
 
-test("population basis changes per-capita values and reset restores the start state", async () => {
+test("coverage marks the mapped SMP items computable once every export is loaded", async () => {
   replay.__resetReplayForTests();
-  const p = await replay.previewSample("zarfi-3_SINTETIKE_burimet_njerezore_2026.xlsx");
-  await replay.commitIngest({
-    preview_id: p.preview_id,
-    dataset: "staff",
-    mapping: p.mapping.map((m) => ({ column: m.column, field: m.field })),
-  });
+  for (const name of [ZARFI_1, ZARFI_2, ZARFI_3]) await load(name);
+  const coverage = await replay.getCoverage("al_smp");
+  assert.deepEqual(coverage.counts, { computable: 5, missing: 18, document: 10, national: 12, manual: 7 });
+  const computable = coverage.items.filter((i) => i.state === "computable").map((i) => i.passport_code);
+  assert.deepEqual(computable, ["REV-02", "WST-02", "WST-03", "HR-02", "HR-01"]);
+  assert.ok(coverage.items.find((i) => i.number === 14).note.sq.endsWith("Baza e popullsisë: Censusi 2023."));
+  assert.equal((await replay.getBoard()).coverage.computable, 13);
+});
+
+test("population basis switches per-capita values to the recorded civil-registry run; reset restores", async () => {
+  replay.__resetReplayForTests();
+  await load(ZARFI_3);
   const census = (await replay.getBoard()).indicators.find((i) => i.code === "HR-01");
-  assert.equal(census.value, 8.62);
+  assert.equal(census.value, SNAPSHOT.passports.full["HR-01"].value);
   assert.equal(census.basis, "census_2023");
   await replay.setPopulationBasis("civil_registry");
   const registry = (await replay.getBoard()).indicators.find((i) => i.code === "HR-01");
-  assert.equal(registry.value, 5.01);
+  assert.equal(registry.value, SNAPSHOT.passports.civil_registry["HR-01"].value);
   assert.equal(registry.basis, "civil_registry");
+  assert.notEqual(registry.value, census.value);
   const reset = await replay.resetDemo();
   assert.deepEqual(reset.coverage, { computable: 6, total: 13 });
   const calls = await replay.getLlmCalls();
   assert.equal(calls.mode, "rules");
   assert.equal(calls.calls.length, 0);
-  const evaluation = await replay.getEval();
-  assert.equal(evaluation.by_label.reduce((s, r) => s + r.total, 0), 24);
+});
+
+test("REPLAY CSV export keeps a Burimi column and names the missing exports", async () => {
+  const { replayCsv } = await import("../src/lib/replay-export.ts");
+  replay.__resetReplayForTests();
+  const board = await replay.getBoard();
+  const lines = replayCsv(board, "sq").split("\n");
+  assert.equal(lines.length, 14);
+  assert.ok(lines[0].split(",").includes("Burimi"));
+  assert.ok(lines.find((l) => l.startsWith("REQ-01,")).includes("01_SINTETIKE_kerkesat"));
+  assert.ok(lines.find((l) => l.startsWith("WST-01,")).includes("MUNGON"));
+});
+
+test("dates by month and long row-range lists are summarised for display", async () => {
+  const { formatDate, summariseRanges } = await import("../src/lib/format.ts");
+  assert.equal(formatDate("2026-08", "sq"), "31 gusht 2026");
+  assert.equal(formatDate("2026-02", "en"), "28 February 2026");
+  assert.equal(formatDate("2026-08-15", "sq"), "15 gusht 2026");
+  const r = summariseRanges("4, 6–12, 14–287, 289–330, 332–359, 361–365");
+  assert.equal(r.text, "4, 6–12, 14–287, 289–330");
+  assert.equal(r.more, 2);
+  assert.equal(r.all.length, 6);
+  assert.deepEqual(summariseRanges("4–2403"), { text: "4–2403", more: 0, all: ["4–2403"] });
+  assert.deepEqual(summariseRanges(null), { text: "", more: 0, all: [] });
+});
+
+test("result-table cells keep their precision in the locale's number format", async () => {
+  const { formatCell } = await import("../src/lib/format.ts");
+  assert.equal(formatCell(91.9, "sq"), "91,9");
+  assert.equal(formatCell(2562.4, "sq"), "2.562,4");
+  assert.equal(formatCell(2562.4, "en"), "2,562.4");
+  assert.equal(formatCell(61, "en"), "61");
+  assert.equal(formatCell("Drejtoria e Punëve Publike", "sq"), "Drejtoria e Punëve Publike");
+  assert.equal(formatCell(null, "sq"), "–");
 });

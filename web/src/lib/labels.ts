@@ -29,15 +29,6 @@ export const ASK_LABEL_TONE: Record<AskLabel, Tone> = {
   not_answerable: "neutral",
 };
 
-/** Message keys (namespace `labels`) for the short name and the meaning. */
-export function askLabelKeys(label: AskLabel) {
-  return { name: `${label}.name`, meaning: `${label}.meaning`, stamp: `${label}.stamp` } as const;
-}
-
-export function isAskLabel(value: string): value is AskLabel {
-  return (ASK_LABELS as readonly string[]).includes(value);
-}
-
 // ---------------------------------------------------------------- mapping confidence
 
 export const HIGH_CONFIDENCE = 0.8;
@@ -70,8 +61,6 @@ export function pendingConfirmations(
 
 // ---------------------------------------------------------------- coverage
 
-export const COVERAGE_STATES: readonly IndicatorState[] = ["computable", "document", "national", "missing", "manual"];
-
 export function countCoverage(items: readonly Pick<CoverageItem, "state">[]) {
   const counts: Record<IndicatorState, number> = {
     computable: 0,
@@ -96,8 +85,8 @@ export function groupBy<T>(items: readonly T[], key: (item: T) => string): { key
   return [...groups.entries()].map(([k, list]) => ({ key: k, items: list }));
 }
 
-/** Citizen-facing areas first; finance last (national figures already cover it). */
-export const AREA_ORDER = ["requests", "waste", "revenue", "hr", "finance"];
+/** Contract §3 order: the start state (requests + finance) fills the proof meter from the left. */
+export const AREA_ORDER = ["requests", "finance", "waste", "revenue", "hr"];
 
 export function groupIndicatorsByArea(indicators: readonly IndicatorSummary[]) {
   const groups = groupBy(indicators, (i) => i.area.key).map((g) => ({
@@ -110,12 +99,6 @@ export function groupIndicatorsByArea(indicators: readonly IndicatorSummary[]) {
     return i === -1 ? AREA_ORDER.length : i;
   };
   return groups.sort((a, b) => rank(a.key) - rank(b.key));
-}
-
-/** "6/13": computable indicators over the pack size. */
-export function coverageRatio(board: Pick<IndicatorBoard, "coverage">) {
-  const { computable, total } = board.coverage;
-  return { computable, total, pct: total > 0 ? (computable / total) * 100 : 0 };
 }
 
 // ---------------------------------------------------------------- status
@@ -222,12 +205,3 @@ export function receiptBalance(receipt: Pick<LoadReceipt, "rows_read" | "rows_lo
 
 export const reconciliationOk = (receipt: Pick<LoadReceipt, "reconciliation">) =>
   receipt.reconciliation.every((r) => r.ok);
-
-/** Area icon keys used by the board (mapped to lucide icons in the component). */
-export const AREA_ICON: Record<string, string> = {
-  requests: "inbox",
-  finance: "landmark",
-  waste: "trash",
-  revenue: "coins",
-  hr: "users",
-};

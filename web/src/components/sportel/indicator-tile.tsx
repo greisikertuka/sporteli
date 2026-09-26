@@ -15,6 +15,9 @@ import { statusTone } from "@/lib/labels";
 
 import { CodeChip, Sparkline, SyntheticMark } from "./ui";
 
+/** "SMP-AL 2024 #47" → "SMP #47" on the tile; the full reference stays in the title. */
+const shortSmp = (ref: string) => ref.split("·")[0].replace(/^SMP-AL\s*\d{4}\s*/i, "SMP ").trim();
+
 export function IndicatorTile({
   indicator: i,
   fresh,
@@ -37,7 +40,11 @@ export function IndicatorTile({
       <article className="tile tile-gap" style={style} data-state={i.state}>
         <div className="tile-top">
           <CodeChip>{i.code}</CodeChip>
-          {i.smp_ref && <span className="tile-smp">{i.smp_ref.split("·")[0].trim()}</span>}
+          {i.smp_ref && (
+            <span className="tile-smp" title={i.smp_ref}>
+              {shortSmp(i.smp_ref)}
+            </span>
+          )}
           <FileQuestion className="tile-gap-icon" aria-hidden />
         </div>
         <h3 className="tile-name">
@@ -80,7 +87,11 @@ export function IndicatorTile({
     <article className={`tile tile-proof ${fresh ? "is-fresh" : ""}`} style={style} data-status={i.status ?? "none"}>
       <div className="tile-top">
         <CodeChip>{i.code}</CodeChip>
-        {i.smp_ref && <span className="tile-smp">{i.smp_ref.split("·")[0].trim()}</span>}
+        {i.smp_ref && (
+            <span className="tile-smp" title={i.smp_ref}>
+              {shortSmp(i.smp_ref)}
+            </span>
+          )}
         {warnSignals.length > 0 && (
           <span className="tile-signal">
             <AlertTriangle aria-hidden />

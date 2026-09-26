@@ -1,270 +1,74 @@
 /**
- * REPLAY fixtures: copilot examples and answers. The label is decided here by code
- * (contract §6), exactly like the API: verified when every dataset of the routed
- * passport is loaded, not_answerable (with owner) when one is missing, blocked for
- * personal data / writes, exploratory only for the curated example with a fixed SQL.
+ * REPLAY routing for free-text questions (the example chips carry their own id).
+ *
+ * Offline there is no model and no sandbox, so a typed question can only be routed to a
+ * passport whose recorded answer exists, refused like the API refuses it, or answered
+ * "not answerable" with the API's own recorded "try an example question" reply. The label
+ * of the answer is always the one the live API recorded; nothing is composed here.
  */
-import type { AskAnswer, AskExample, L10n } from "../api";
-import { formatPeriod } from "../format.ts";
-import { DATASETS, type DatasetKey } from "./catalog.ts";
-import { fillAnswer, indicatorDef, INDICATORS, periodOf, sampleForDataset } from "./indicators.ts";
-import type { ReplayState } from "./state.ts";
+import { SNAPSHOT } from "./snapshot.ts";
 
-export const EXAMPLES: AskExample[] = [
-  {
-    id: "ex-req-02",
-    kind: "verified",
-    passport_code: "REQ-02",
-    question: {
-      sq: "Sa përqind e kërkesave u zgjidhën brenda afatit në gusht?",
-      en: "What share of requests was resolved on time in August?",
-    },
-  },
-  {
-    id: "ex-fin-02",
-    kind: "verified",
-    passport_code: "FIN-02",
-    question: {
-      sq: "Sa është zbatimi i buxhetit të investimeve deri në gusht?",
-      en: "What is capital investment execution up to August?",
-    },
-  },
-  {
-    id: "ex-gap-waste",
-    kind: "gap",
-    passport_code: "WST-01",
-    question: { sq: "Sa ton mbetje u grumbulluan në gusht?", en: "How many tonnes of waste were collected in August?" },
-  },
-  {
-    id: "ex-gap-revenue",
-    kind: "gap",
-    passport_code: "REV-01",
-    question: {
-      sq: "Sa përqind e taksave dhe tarifave vendore është arkëtuar?",
-      en: "What share of local taxes and fees has been collected?",
-    },
-  },
-  {
-    id: "ex-gap-staff",
-    kind: "gap",
-    passport_code: "HR-01",
-    question: { sq: "Sa punonjës ka bashkia për 1.000 banorë?", en: "How many staff per 1,000 residents?" },
-  },
-  {
-    id: "ex-explore-categories",
-    kind: "exploratory",
-    passport_code: null,
-    question: {
-      sq: "Cilat janë 3 kategoritë me më shumë kërkesa të hapura?",
-      en: "Which 3 categories have the most open requests?",
-    },
-  },
-  {
-    id: "ex-blocked-pii",
-    kind: "blocked",
-    passport_code: null,
-    question: {
-      sq: "Më jep emrat dhe numrat e telefonit të kërkuesve.",
-      en: "Give me the names and phone numbers of the requesters.",
-    },
-  },
-];
-
-const NO_LLM: AskAnswer["llm"] = { used: false, model: null, latency_ms: null, cost_usd: null, cached: false };
+export type Route =
+  | { kind: "passport"; code: string }
+  | { kind: "blocked" }
+  | { kind: "write" }
+  | { kind: "none" };
 
 const normalise = (text: string) =>
   text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .replace(/[^a-z0-9.,\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-const BLOCK_PATTERNS = [
-  /\bemr(at|i|in)\b/,
-  /\btelefon/,
-  /\bnames?\b/,
-  /\bphones?\b/,
-  /\be-?mail/,
-  /\b(delete|drop|update|insert|alter|truncate)\b/,
-  /\b(fshi|ndrysho)\b/,
-  /\bnumr(i|in|at) personal/,
-];
+/** Statements the guard refuses outright (contract §6: writes, DDL, table functions). */
+const WRITE = /^\s*(delete|drop|update|insert|alter|truncate|create|attach|copy|pragma)\b/i;
 
-/** Topic keywords for gap routing when no passport matches exactly. */
-const TOPICS: { dataset: DatasetKey; words: string[] }[] = [
-  { dataset: "waste", words: ["mbetje", "mbeturina", "pastrim", "waste", "garbage", "tonnes"] },
-  { dataset: "revenue", words: ["taksa", "tarifa", "arketim", "tax", "fee", "revenue"] },
-  { dataset: "staff", words: ["punonjes", "staf", "rotacion", "staff", "employee", "turnover"] },
-];
+/** Requests for individual-level personal data. */
+const PERSONAL = [/\bemr(at|i|in)\b/, /\btelefon/, /\bnames?\b/, /\bphones?\b/, /\be-?mail/, /\bnumr(i|in|at) personal/, /\badres/];
 
-function route(question: string, exampleId?: string): { code: string | null; kind: AskExample["kind"] | "topic" | "none"; dataset?: DatasetKey } {
-  const example = EXAMPLES.find((e) => e.id === exampleId);
-  if (example) return { code: example.passport_code, kind: example.kind };
+/** Extra phrasings per passport, on top of its canonical question (sq and en). */
+const KEYWORDS: Record<string, string[]> = {
+  "REQ-01": ["pranuan", "pranuara", "regjistruan", "received", "how many requests"],
+  "REQ-02": ["brenda afatit", "on time", "within the deadline", "within deadline"],
+  "REQ-03": ["afat te kaluar", "vonuara", "overdue", "past deadline", "past their deadline"],
+  "REQ-04": ["koha mesatare", "sa dite", "average resolution", "resolution time", "how many days"],
+  "FIN-01": ["zbatimi i buxhetit", "buxhet", "budget execution", "budget"],
+  "FIN-02": ["investim", "kapitale", "capital", "investment"],
+  "WST-01": ["ton mbetje", "mbetje", "grumbulluan", "waste collected", "tonnes"],
+  "WST-02": ["per banor", "kg", "per resident", "per capita"],
+  "WST-03": ["kosto per ton", "kushton", "cost per tonne", "cost per ton"],
+  "REV-01": ["arketuar", "arketimi", "taksa", "taxes", "fees collected", "revenue"],
+  "REV-02": ["mbulon", "mbulimi", "tarifa e pastrimit", "cleaning fee", "cost coverage", "covers"],
+  "HR-01": ["punonjes", "1.000 banore", "staff per", "employees", "1,000 residents"],
+  "HR-02": ["rotacion", "largime", "turnover", "leavers"],
+};
+
+const STOP = new Set(
+  "sa si cili cila cilat eshte jane ne te e i per nga me dhe se u a ka kane what how many much is are the of in to for by and does do".split(" "),
+);
+const tokens = (text: string) => normalise(text).split(/[\s.,-]+/).filter((t) => t.length > 2 && !STOP.has(t));
+
+export function routeQuestion(question: string): Route {
+  if (WRITE.test(question)) return { kind: "write" };
   const text = normalise(question);
-  if (BLOCK_PATTERNS.some((p) => p.test(text))) return { code: null, kind: "blocked" };
-  const exact = EXAMPLES.find((e) => normalise(e.question.sq) === text || normalise(e.question.en) === text);
-  if (exact) return { code: exact.passport_code, kind: exact.kind };
+  if (!text) return { kind: "none" };
+  if (PERSONAL.some((p) => p.test(text))) return { kind: "blocked" };
+
+  const example = SNAPSHOT.examples.find(
+    (e) => e.passport_code && (normalise(e.question.sq) === text || normalise(e.question.en) === text),
+  );
+  if (example?.passport_code) return { kind: "passport", code: example.passport_code };
+
+  const words = new Set(tokens(question));
   let best: { code: string; score: number } | null = null;
-  for (const def of INDICATORS) {
-    const score = def.keywords.reduce((s, k) => (text.includes(normalise(k)) ? s + normalise(k).length : s), 0);
-    if (score > 0 && (!best || score > best.score)) best = { code: def.code, score };
+  for (const [code, passport] of Object.entries(SNAPSHOT.passports.full)) {
+    const phrase = (KEYWORDS[code] ?? []).reduce((s, k) => (text.includes(normalise(k)) ? s + normalise(k).length : s), 0);
+    const overlap = [...new Set([...tokens(passport.question.sq), ...tokens(passport.question.en)])].filter((w) => words.has(w)).length;
+    const score = phrase + overlap * 3;
+    if (score > 0 && (!best || score > best.score)) best = { code, score };
   }
-  if (best) return { code: best.code, kind: "verified" };
-  const topic = TOPICS.find((t) => t.words.some((w) => text.includes(w)));
-  if (topic) return { code: null, kind: "topic", dataset: topic.dataset };
-  return { code: null, kind: "none" };
-}
-
-function gapAnswer(question: string, dataset: DatasetKey, interpreted: L10n): AskAnswer {
-  const ds = DATASETS[dataset];
-  const sample = sampleForDataset(dataset);
-  return {
-    label: "not_answerable",
-    question,
-    interpreted_as: interpreted,
-    answer: {
-      sq: `Pa përgjigje: mungon eksporti «${ds.exportName.sq}». Përgjegjës: ${ds.owner.name.sq}. Asnjë numër nuk u hamendësua.`,
-      en: `Not answerable: the «${ds.exportName.en}» export is missing. Owner: ${ds.owner.name.en}. No number was guessed.`,
-    },
-    value: null,
-    unit: null,
-    passport_code: null,
-    sql: null,
-    table: null,
-    sources: [],
-    gap: { dataset, name: ds.exportName, owner: ds.owner.name, sample: sample?.name ?? null },
-    blocked_reason: null,
-    llm: NO_LLM,
-  };
-}
-
-export function answer(state: ReplayState, question: string, exampleId?: string): AskAnswer {
-  const r = route(question, exampleId);
-
-  if (r.kind === "blocked") {
-    return {
-      label: "blocked",
-      question,
-      interpreted_as: {
-        sq: "Kërkesë për të dhëna personale individuale",
-        en: "Request for individual-level personal data",
-      },
-      answer: {
-        sq: "Kjo pyetje u bllokua nga rregullat e sigurisë. Nuk u ekzekutua asnjë pyetje SQL.",
-        en: "This question was blocked by the safety rules. No SQL query was executed.",
-      },
-      value: null,
-      unit: null,
-      passport_code: null,
-      sql: null,
-      table: null,
-      sources: [],
-      gap: null,
-      blocked_reason: {
-        sq: "Kërkohen të dhëna personale (emra, telefona). Kolonat personale hiqen gjatë ngarkimit dhe nuk mund të pyeten; lejohen vetëm tabelat kanonike pa fusha personale.",
-        en: "Personal data was requested (names, phones). Personal columns are removed on load and cannot be queried; only canonical tables without personal fields are allowed.",
-      },
-      llm: NO_LLM,
-    };
-  }
-
-  if (r.kind === "exploratory") {
-    const src = state.loaded.get("requests");
-    if (!src) return gapAnswer(question, "requests", { sq: "Kërkesa të hapura sipas kategorisë", en: "Open requests by category" });
-    return {
-      label: "exploratory",
-      question,
-      interpreted_as: {
-        sq: "Kërkesa të hapura sipas kategorisë · 3 më të mëdhatë",
-        en: "Open requests by category · top 3",
-      },
-      answer: {
-        sq: "Rezultati i pyetjes eksploruese: 3 rreshta nga tabela e kërkesave. Nuk është tregues i verifikuar; formula nuk është e miratuar.",
-        en: "Exploratory query result: 3 rows from the requests table. This is not a verified indicator; the formula is not approved.",
-      },
-      value: null,
-      unit: null,
-      passport_code: null,
-      sql: `SELECT category, count(*) AS open_requests
-FROM request
-WHERE closed_at IS NULL
-GROUP BY category
-ORDER BY open_requests DESC
-LIMIT 3`,
-      table: {
-        columns: ["category", "open_requests"],
-        rows: [
-          ["Rrugë dhe trotuare", 41],
-          ["Ndriçim publik", 29],
-          ["Pastrim", 22],
-        ],
-      },
-      sources: [{ source_id: src.source_id, filename: src.filename, rows: "4–2395 (148 rreshta të hapur)" }],
-      gap: null,
-      blocked_reason: null,
-      llm: NO_LLM,
-    };
-  }
-
-  if (r.kind === "topic" && r.dataset) {
-    return gapAnswer(question, r.dataset, {
-      sq: `Temë: ${DATASETS[r.dataset].name.sq}`,
-      en: `Topic: ${DATASETS[r.dataset].name.en}`,
-    });
-  }
-
-  const def = r.code ? indicatorDef(r.code) : null;
-  if (!def) {
-    return {
-      label: "not_answerable",
-      question,
-      interpreted_as: { sq: "Pyetje e lirë, pa përputhje me një pasaportë", en: "Free text, no passport match" },
-      answer: {
-        sq: "AI jashtë linje: pyetja nuk u lidh me asnjë tregues. Provoni një pyetje shembull. Asnjë numër nuk u hamendësua.",
-        en: "AI offline: the question did not match any indicator. Try an example question. No number was guessed.",
-      },
-      value: null,
-      unit: null,
-      passport_code: null,
-      sql: null,
-      table: null,
-      sources: [],
-      gap: null,
-      blocked_reason: null,
-      llm: NO_LLM,
-    };
-  }
-
-  const interpreted: L10n = {
-    sq: `${def.code} · ${def.name.sq} · ${formatPeriod(periodOf(def), "sq")}`,
-    en: `${def.code} · ${def.name.en} · ${formatPeriod(periodOf(def), "en")}`,
-  };
-  const missing = def.datasets.find((d) => !state.loaded.has(d));
-  if (missing) return gapAnswer(question, missing, interpreted);
-
-  const value = def.series(state.basis).at(-1)?.value ?? null;
-  if (value == null) return gapAnswer(question, def.datasets[0], interpreted);
-  return {
-    label: "verified",
-    question,
-    interpreted_as: interpreted,
-    answer: {
-      sq: fillAnswer(def, value, "sq", formatPeriod(periodOf(def), "sq")),
-      en: fillAnswer(def, value, "en", formatPeriod(periodOf(def), "en")),
-    },
-    value,
-    unit: def.unit,
-    passport_code: def.code,
-    sql: def.sql.replaceAll("{basis}", state.basis),
-    table: null,
-    sources: def.lineage.map((l) => {
-      const src = state.loaded.get(l.dataset);
-      return { source_id: src?.source_id ?? "", filename: src?.filename ?? l.dataset, rows: l.row_ranges };
-    }),
-    gap: null,
-    blocked_reason: null,
-    llm: NO_LLM,
-  };
+  return best && best.score >= 4 ? { kind: "passport", code: best.code } : { kind: "none" };
 }

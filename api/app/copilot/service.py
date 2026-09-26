@@ -128,9 +128,16 @@ def _interpreted_passport(p: Passport) -> L10n:
     }
 
 
-def _suggestion(p: Passport | None) -> L10n:
+def _suggestion(p: Passport | None, also: Passport | None = None) -> L10n:
     if p is None:
         return {"sq": "", "en": ""}
+    if also is not None:
+        return {
+            "sq": f" Pyetja përshtatet me dy tregues: «{p.question['sq']}» "
+            f"ose «{also.question['sq']}»",
+            "en": f" The question fits two indicators: “{p.question['en']}” "
+            f"or “{also.question['en']}”",
+        }
     return {
         "sq": f" Treguesi më i afërt: «{p.question['sq']}»",
         "en": f" Closest indicator: “{p.question['en']}”",
@@ -483,9 +490,10 @@ def _offline(
     related: Passport | None = None,
     reason: str = "offline",
     llm: dict | None = None,
+    also: Passport | None = None,
 ) -> dict:
     """``not_answerable`` without a gap: AI offline/failed, a breakdown, or out of scope."""
-    tip = _suggestion(related)
+    tip = _suggestion(related, also)
     if reason == "breakdown" and related is not None:
         answer = {
             "sq": "Kjo pyetje kërkon një ndarje ose filtër (p.sh. sipas muajit, njësisë ose "
@@ -668,16 +676,18 @@ def ask(
         if not dataset_loaded(con, ds):
             return _gap_answer(q, [ds])
 
-    related = None
+    related = also = None
     if match.candidates and match.candidates[0].score >= SUGGEST_THRESHOLD:
         related = get_passport(match.candidates[0].code)
+        if match.ambiguous:
+            also = get_passport(match.candidates[1].code)
 
     # 7. The model, if live.
     if client.mode == "live":
         return _llm_route(con, q, client, related=related)
 
     # 8. Offline.
-    return _offline(q, related=related, reason="offline")
+    return _offline(q, related=related, reason="offline", also=also)
 
 
 def _data_year(con: duckdb.DuckDBPyConnection, p: Passport) -> int | None:

@@ -51,6 +51,7 @@ export function LoadReceipt({
 }) {
   const t = useTranslations("receipt");
   const tc = useTranslations("common");
+  const tApp = useTranslations("app");
   const locale = useLocale();
   const n = (v: number) => formatNumber(v, locale);
   const balance = receiptBalance(r);
@@ -60,7 +61,7 @@ export function LoadReceipt({
     <div className={`receipt-wrap ${animate ? "is-printing" : ""} ${compact ? "compact" : ""}`}>
       <article className="receipt" aria-label={t("title")}>
         <header className="receipt-head">
-          <p className="receipt-brand">SPORTEL</p>
+          <p className="receipt-brand">{tApp("name")}</p>
           <h3>{t("title")}</h3>
           <p className="receipt-sub">{pick(r.dataset_name, locale)}</p>
           {r.synthetic && <p className="receipt-synthetic">{t("synthetic")}</p>}

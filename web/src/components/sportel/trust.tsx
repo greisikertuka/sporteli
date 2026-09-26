@@ -25,6 +25,7 @@ function sentSummary(sent: unknown): { headers: number; samples: number; rows: n
 
 export function TrustScreen() {
   const t = useTranslations("trust");
+  const th = useTranslations("header");
   const locale = useLocale();
   const { health } = useSystem();
   const calls = useApi("llm:calls", getLlmCalls);
@@ -75,7 +76,7 @@ export function TrustScreen() {
           <h2 id="mode-title">{t("modeTitle")}</h2>
           <p className={`mode-flag ${mode}`}>
             {mode === "live" ? <span className="live-dot" aria-hidden /> : <Cpu aria-hidden />}
-            {mode === "live" ? "AI LIVE" : locale === "en" ? "RULES" : "RREGULLA"}
+            {mode === "live" ? th("aiLive") : th("aiRules")}
           </p>
           <p>{mode === "live" ? t("modeLive") : t("modeRules")}</p>
           <h3>{t("spendTitle")}</h3>
@@ -155,7 +156,7 @@ export function TrustScreen() {
                   return (
                     <tr key={`${c.ts}-${i}`}>
                       <td>{formatDateTime(c.ts, locale)}</td>
-                      <td>{c.purpose}</td>
+                      <td>{t.has(`purpose.${c.purpose}`) ? t(`purpose.${c.purpose}` as "purpose.ingest_mapping") : c.purpose}</td>
                       <td className="mono">{c.model}</td>
                       <td className="numeric">
                         {formatNumber(c.input_tokens, locale)} / {formatNumber(c.output_tokens, locale)}

@@ -3,13 +3,15 @@
 Drops all data (the LLM call log survives, so the spend budget is kept), clears mapping recipes,
 then loads the preload files listed in ``samples/manifest.json`` (requests, budget, population)
 through the real ingest pipeline with rules mapping: 6 of 13 indicators become computable.
-``--all`` also loads envelopes 1–3 (waste, revenue, staff): 13 of 13.
+``--all`` also loads envelopes 1–3 (waste, revenue, staff): 13 of 13. ``--if-empty`` seeds only
+when no source has been loaded yet (the container entrypoint uses it, so a restart keeps the
+data people uploaded).
 
 The target database is ``DUCKDB_PATH`` (default ``api/data/pulse.duckdb``). Stop any server that
 holds the file first: DuckDB allows one writer process.
 
 Usage:
-    cd api && uv run python scripts/seed_demo.py [--all] [--db PATH] [--json]
+    cd api && uv run python scripts/seed_demo.py [--all] [--if-empty] [--db PATH] [--json]
 """
 
 from __future__ import annotations
@@ -31,6 +33,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--all", action="store_true", help="also load envelopes 1-3 (13/13)")
     ap.add_argument("--db", default=None, help="DuckDB file (default: DUCKDB_PATH or settings)")
     ap.add_argument("--json", action="store_true", help="print the result as JSON")
+    ap.add_argument(
+        "--if-empty", action="store_true", help="do nothing when a source is already loaded"
+    )
     args = ap.parse_args(argv)
 
     if args.db:
@@ -46,6 +51,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         con = get_db().cursor()
         try:
+            if args.if_empty:
+                (loaded,) = con.execute("SELECT count(*) FROM source").fetchone()
+                if loaded:
+                    print(
+                        f"Sportel demo: {loaded} source(s) already loaded in "
+                        f"{get_settings().duckdb_file}; nothing to seed (--if-empty)."
+                    )
+                    return 0
             result = reset_demo(con, envelopes=args.all)
         finally:
             con.close()

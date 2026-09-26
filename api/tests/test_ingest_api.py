@@ -99,7 +99,7 @@ def test_gap_to_proof_loop_over_http(client):
     res = client.post(f"{API}/ingest/commit", json=commit_body(preview, save_recipe=True))
     assert res.status_code == 200, res.text
     receipt = res.json()
-    assert RECEIPT_KEYS <= set(receipt)
+    assert set(receipt) >= RECEIPT_KEYS
     assert all(r["ok"] for r in receipt["reconciliation"])
     assert [u["code"] for u in receipt["indicators_unlocked"]] == ["REV-01", "REV-02"]
     assert receipt["coverage"] == {"computable": 8, "total": 13}
@@ -107,7 +107,7 @@ def test_gap_to_proof_loop_over_http(client):
 
     sources = client.get(f"{API}/sources").json()
     assert sources[0]["source_id"] == receipt["source_id"]
-    assert sources[0]["mapping"] and RECEIPT_KEYS <= set(sources[0])
+    assert sources[0]["mapping"] and set(sources[0]) >= RECEIPT_KEYS
     assert len(sources) == 4
 
     recipes = client.get(f"{API}/ingest/recipes").json()

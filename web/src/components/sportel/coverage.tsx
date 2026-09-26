@@ -3,7 +3,7 @@
 import { ArrowUpRight, Stamp } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { useApi } from "@/hooks/use-api";
 import type { CoverageItem, IndicatorState } from "@/lib/api";
@@ -11,7 +11,6 @@ import { getCoverage } from "@/lib/client";
 import { pick } from "@/lib/format";
 import { groupBy } from "@/lib/labels";
 
-import { useSystem } from "./system-context";
 import { CodeChip, ErrorState, LoadingBlock, PageHeader } from "./ui";
 
 const ORDER: IndicatorState[] = ["computable", "document", "national", "missing", "manual"];
@@ -27,15 +26,8 @@ export function CoverageScreen() {
   const t = useTranslations("coverage");
   const locale = useLocale();
   const coverage = useApi("coverage:al_smp", () => getCoverage("al_smp"));
-  const { board, replay } = useSystem();
   const [filter, setFilter] = useState<IndicatorState | "all">("all");
   const data = coverage.data;
-
-  const liveState = useMemo(() => {
-    const map = new Map<string, IndicatorState>();
-    for (const i of board.data?.indicators ?? []) map.set(i.code, i.state);
-    return map;
-  }, [board.data]);
 
   if (!data) {
     return (
@@ -46,10 +38,11 @@ export function CoverageScreen() {
     );
   }
 
-  const states = ORDER.filter((s) => data.counts[s] > 0);
+  // "computable" stays visible at 0: it is the number this pilot is meant to move.
+  const states = ORDER.filter((s) => s === "computable" || data.counts[s] > 0);
   const visible = data.items.filter((i) => filter === "all" || i.state === filter);
   const groups = groupBy(visible, (i) => i.area.sq);
-  const liveComputable = data.items.filter((i) => i.passport_code && liveState.get(i.passport_code) === "computable").length;
+  const mapped = data.items.filter((i) => i.passport_code && i.state !== "national").length;
 
   return (
     <>
@@ -60,11 +53,10 @@ export function CoverageScreen() {
         <div>
           <strong>{data.approval === "pending" ? t("banner") : pick(data.label, locale)}</strong>
           <p>{t("bannerBody")}</p>
-          {replay.replay && <p className="fine-print">{t("replayNote")}</p>}
         </div>
       </div>
 
-      <section className="coverage-overview" aria-label={t("waffle")}>
+      <section className="coverage-overview" aria-label={t("waffle")} aria-busy={coverage.loading}>
         <div className="coverage-stats">
           {states.map((s) => (
             <button
@@ -77,11 +69,7 @@ export function CoverageScreen() {
               <span className="stat-count">{data.counts[s]}</span>
               <span className="stat-label">{t(`state.${s}`)}</span>
               <span className="stat-hint">{t(`stateHint.${s}`)}</span>
-              {s === "computable" && (
-                <span className="stat-live">
-                  {liveComputable} {t("live")}
-                </span>
-              )}
+              {s === "computable" && <span className="stat-live">{t("mapped", { count: mapped })}</span>}
             </button>
           ))}
         </div>
@@ -91,9 +79,13 @@ export function CoverageScreen() {
           </figcaption>
           <ol className="waffle">
             {data.items.map((item) => {
-              const live = item.passport_code ? liveState.get(item.passport_code) : undefined;
               return (
-                <li key={item.number} data-state={item.state} data-live={live === "computable" ? "" : undefined} className={filter !== "all" && item.state !== filter ? "dim" : ""}>
+                <li
+                  key={item.number}
+                  data-state={item.state}
+                  data-mapped={item.passport_code && item.state === "missing" ? "" : undefined}
+                  className={filter !== "all" && item.state !== filter ? "dim" : ""}
+                >
                   <a href={`#smp-${item.number}`} aria-label={`${t("number", { n: item.number })} · ${item.name_sq} · ${t(`state.${item.state}`)}`}>
                     {item.number}
                   </a>
@@ -101,6 +93,12 @@ export function CoverageScreen() {
               );
             })}
           </ol>
+          {mapped > 0 && (
+            <p className="waffle-legend">
+              <i aria-hidden />
+              {t("waffleMapped")}
+            </p>
+          )}
         </figure>
       </section>
 
@@ -124,7 +122,7 @@ export function CoverageScreen() {
           </h2>
           <ul className="coverage-list">
             {g.items.map((item) => (
-              <CoverageRow key={item.number} item={item} live={item.passport_code ? liveState.get(item.passport_code) : undefined} />
+              <CoverageRow key={item.number} item={item} />
             ))}
           </ul>
         </section>
@@ -133,7 +131,7 @@ export function CoverageScreen() {
   );
 }
 
-function CoverageRow({ item, live }: { item: CoverageItem; live: IndicatorState | undefined }) {
+function CoverageRow({ item }: { item: CoverageItem }) {
   const t = useTranslations("coverage");
   const locale = useLocale();
   return (
@@ -151,7 +149,11 @@ function CoverageRow({ item, live }: { item: CoverageItem; live: IndicatorState 
         {item.passport_code && (
           <Link className="coverage-passport" href={`/indicators/${encodeURIComponent(item.passport_code)}`}>
             <CodeChip>{item.passport_code}</CodeChip>
-            <span className={live === "computable" ? "live-yes" : "live-no"}>{live === "computable" ? t("live") : t("liveMissing")}</span>
+            {item.state !== "national" && (
+              <span className={item.state === "computable" ? "live-yes" : "live-no"}>
+                {item.state === "computable" ? t("live") : t("liveMissing")}
+              </span>
+            )}
             <ArrowUpRight aria-hidden />
           </Link>
         )}

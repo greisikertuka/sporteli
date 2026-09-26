@@ -29,8 +29,8 @@
     "aiLiveHint": "Modeli AI është aktiv: propozon përputhjen e kolonave dhe kupton pyetjet. Çdo numër e llogarit kodi.",
     "aiRulesHint": "AI nuk është aktive: përputhja dhe pyetjet përdorin rregulla deterministe. Asgjë nuk dërgohet jashtë.",
     "replay": "REPLAY",
-    "replayForcedHint": "Po shfaqen fixture-t REPLAY (NEXT_PUBLIC_USE_FIXTURES=1), jo API-ja live.",
-    "replayOfflineHint": "API nuk arrihet. Po shfaqet një riprodhim offline me të dhëna sintetike; asnjë numër nuk vjen nga API-ja live.",
+    "replayForcedHint": "REPLAY (NEXT_PUBLIC_USE_FIXTURES=1): përgjigje të regjistruara nga API-ja mbi të dhënat sintetike. Shfletuesi nuk llogarit asnjë numër.",
+    "replayOfflineHint": "API nuk arrihet. Po shfaqet REPLAY: përgjigje të regjistruara më parë nga API-ja mbi të dhënat sintetike, jo të dhëna live.",
     "apiOnline": "API aktive",
     "apiOffline": "API jashtë linje",
     "apiChecking": "Duke kontrolluar API…",
@@ -56,19 +56,13 @@
     "close": "Mbyll",
     "cancel": "Anulo",
     "confirm": "Konfirmo",
-    "download": "Shkarko",
     "print": "Printo",
     "synthetic": "SINTETIKE",
     "draft": "Draft",
     "owner": "Përgjegjës",
-    "rows": "{count, plural, one {# rresht} other {# rreshta}}",
-    "indicators": "{count, plural, one {# tregues} other {# tregues}}",
     "none": "Asnjë",
-    "yes": "Po",
-    "no": "Jo",
     "errorTitle": "Të dhënat nuk u ngarkuan",
-    "errorBody": "Kërkesa dështoi ({code}). Provoni përsëri.",
-    "replayNote": "REPLAY"
+    "errorBody": "Kërkesa dështoi ({code}). Provoni përsëri."
   },
   "board": {
     "kicker": "Paneli · të dhëna deri më {date}",
@@ -133,7 +127,6 @@
     "owner": "Përgjegjës: {owner}",
     "upload": "Ngarko eksportin",
     "proven": "Me provë",
-    "syntheticSource": "Burim sintetik",
     "basis": "baza: {basis}",
     "draft": "formula draft"
   },
@@ -150,13 +143,12 @@
     "owner": "Përgjegjës",
     "status": "Gjendja",
     "basis": "Baza e popullsisë",
-    "computedAt": "Llogaritur më {time}",
     "formula": "Formula",
     "question": "Pyetja kanonike",
     "sql": "SQL që llogarit vlerën",
     "copySql": "Kopjo SQL",
     "lineage": "Prejardhja: skedarët dhe rreshtat",
-    "lineageRows": "{count, plural, one {# rresht} other {# rreshta}} · rreshtat {ranges}",
+    "lineageRows": "{rows} {count, plural, one {rresht} other {rreshta}} · rreshtat {ranges}",
     "hash": "gjurma",
     "sourceRows": "Rreshtat burimorë",
     "sourceRowsNote": "{shown} nga {total} rreshta që kontribuojnë · numri i rreshtit në skedarin origjinal",
@@ -172,11 +164,12 @@
     "openPage": "Hap faqen e pasaportës",
     "backToBoard": "Kthehu te paneli",
     "notFound": "Treguesi {code} nuk u gjet.",
-    "smpRef": "Referenca SMP",
     "required": "Të dhënat e nevojshme",
     "sources": "Burimet",
     "loadingRows": "Duke ngarkuar rreshtat…",
-    "computed": "Llogaritur më"
+    "computed": "Llogaritur më",
+    "rangesMore": "… +{count, plural, one {# interval} other {# intervale}}",
+    "rangesAll": "Shfaq të gjitha intervalet e rreshtave"
   },
   "ingest": {
     "kicker": "Integrimi · raporto një herë",
@@ -206,9 +199,10 @@
       "pii": "Të dhënat personale",
       "profile": "Profili",
       "recipe": "Receta",
-      "mapping": "Përputhja"
+      "mapping": "Përputhja",
+      "dataset": "Grupi i të dhënave"
     },
-    "fileMeta": "{rows, plural, one {# rresht të dhënash} other {# rreshta të dhënash}} · titujt në rreshtin {header}",
+    "fileMeta": "{shown} {rows, plural, one {rresht të dhënash} other {rreshta të dhënash}} · titujt në rreshtin {header}",
     "sheet": "fleta «{sheet}»",
     "datasetDetected": "Grupi: {name}",
     "datasetConfidence": "besueshmëri {pct}",
@@ -269,7 +263,6 @@
     "llmUsed": "AI: {model} · {latency} · {cost}",
     "llmSent": "Dërguar: {headers} tituj · ≤{samples} mostra/kolonë · 0 rreshta",
     "llmError": "AI dështoi ({error}); u përdorën rregullat.",
-    "warnings": "Shënime",
     "sourcesTitle": "Burimet e ngarkuara",
     "sourcesNote": "Çdo ngarkim ka faturën e vet.",
     "recipes": "{count, plural, =0 {Asnjë recetë e ruajtur} one {# recetë e ruajtur} other {# receta të ruajtura}}",
@@ -288,7 +281,11 @@
     "notReconciled": "Nuk barazohet",
     "unknownDataset": "Grupi nuk u njoh automatikisht: zgjidheni më poshtë.",
     "another": "Ngarko një skedar tjetër",
-    "auto": "Automatik"
+    "auto": "Automatik",
+    "actionError": "Veprimi nuk u krye. Provoni përsëri.",
+    "liveReady": "{steps} hapa u kryen. Kontrolloni përputhjen e kolonave para konfirmimit.",
+    "liveDone": "U ngarkuan {rows} rreshta. Mbulimi tani: {computable}/{total}.",
+    "llmBudget": "Buxheti i AI për këtë demo u shterua; përputhja u bë me rregulla."
   },
   "receipt": {
     "title": "Fatura e ngarkimit",
@@ -350,7 +347,6 @@
     "gapOwner": "Përgjegjës",
     "gapCta": "Ngarko eksportin",
     "gapSample": "Skedari: {name}",
-    "noGuess": "Asnjë numër nuk u hamendësua.",
     "blockedTitle": "Pse u bllokua",
     "passport": "Hap pasaportën {code}",
     "llmRules": "Pa AI · rregulla",
@@ -362,7 +358,8 @@
     "evalTitle": "Saktësia në grupin tonë prej {total} pyetjesh — tregues, jo standard",
     "evalNote": "Ekzekutuar më {time} · mënyra {mode}",
     "legend": "Çfarë do të thotë etiketa",
-    "ask": "Pyet: {question}"
+    "ask": "Pyet: {question}",
+    "emptyTitle": "Ende pa pyetje"
   },
   "labels": {
     "verified": {
@@ -393,18 +390,18 @@
     "banner": "Hartëzim paraprak · në pritje të miratimit nga organizatorët",
     "bannerBody": "Kjo hartë nuk është dorëzim zyrtar dhe nuk parashikon pikë granti.",
     "state": {
-      "computable": "Me pasaportë",
+      "computable": "Me provë",
       "document": "Kontroll dokumenti",
       "national": "Kombëtar · AMVV",
       "missing": "Mungon",
       "manual": "Manual"
     },
     "stateHint": {
-      "computable": "Llogaritet nga një pasaportë Sportel kur eksportet janë ngarkuar.",
+      "computable": "Llogaritet sot nga një pasaportë Sportel mbi eksportet e ngarkuara.",
       "document": "Kërkon lidhjen te plani ose publikimi dhe konfirmimin e një personi.",
       "national": "Burimi: Ministria e Financave, llogaritur nga AMVV. Sportel nuk e llogarit.",
       "missing": "Të dhënat nuk janë në eksportet e sotme: lista e pilotit për javën e parë.",
-      "manual": "Plotësohet me dorë nga përgjegjësi."
+      "manual": "Numërohet nga regjistri i strukturës përgjegjëse, jo nga një eksport."
     },
     "filterAll": "Të gjithë",
     "filterLabel": "Filtro sipas gjendjes",
@@ -416,7 +413,8 @@
     "ownerTbd": "Përgjegjësi: për t'u konfirmuar në bashki",
     "count": "{count, plural, one {# tregues} other {# tregues}}",
     "number": "Nr. {n}",
-    "replayNote": "Në REPLAY emrat zyrtarë të Aneksit A nuk shfaqen; vijnë nga API (paketa al_smp)."
+    "mapped": "{count} të lidhur me pasaporta Sportel",
+    "waffleMapped": "I lidhur me një pasaportë Sportel: bëhet me provë sapo të ngarkohet eksporti."
   },
   "briefing": {
     "kicker": "Raporti mujor",
@@ -435,7 +433,6 @@
     "sentenceNoTarget": "{name}: <v>{value}</v> për {period}.",
     "statusOn": "në objektiv",
     "statusOff": "jashtë objektivit",
-    "gapsTitle": "Të dhëna që mungojnë",
     "gapItem": "{dataset}: përgjegjës {owner}.",
     "signalsTitle": "Sinjale për verifikim",
     "sourcesTitle": "Burimet e të dhënave",
@@ -478,7 +475,7 @@
     "limitsTitle": "Kufijtë, të thënë hapur",
     "limits": [
       "Çdo formulë është leximi ynë i pasaportave publike derisa ta validojë Njësia e Performancës ose AMVV; deri atëherë shënohet «draft».",
-      "Rreth 13–14 tregues SMP janë kontrolle dokumenti (plani ose publikimi ekziston) që kërkojnë lidhje dhe konfirmim nga një person.",
+      "10 tregues SMP janë kontrolle dokumenti (plani ose publikimi ekziston) dhe 7 numërohen nga regjistrat; kërkojnë lidhje dhe konfirmim nga një person.",
       "Treguesit 41–52 llogariten në nivel kombëtar nga AMVV me të dhëna të Ministrisë së Financave; Sportel nuk i llogarit.",
       "Një e dhënë që mungon shënohet «nuk llogaritet» me përgjegjësin e emërtuar; nuk vlerësohet kurrë.",
       "Sportel provon qëndrueshmërinë dhe prejardhjen, jo që skedari i një drejtorie është i vërtetë.",
@@ -509,7 +506,11 @@
     "evalTitle": "Saktësia sipas etiketës",
     "evalNote": "Grupi ynë prej {total} pyetjesh · tregues, jo standard · {time} · {mode}",
     "evalMissing": "Vlerësimi nuk është ekzekutuar ende.",
-    "evalRow": "{matched} nga {total}"
+    "evalRow": "{matched} nga {total}",
+    "purpose": {
+      "ingest_mapping": "Përputhja e kolonave",
+      "copilot_intent": "Leximi i pyetjes"
+    }
   },
   "notFound": {
     "title": "Faqja nuk u gjet",

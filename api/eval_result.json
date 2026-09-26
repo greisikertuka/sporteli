@@ -1,6 +1,6 @@
 {
-  "run_at": "2026-09-26T00:38:15+00:00",
-  "commit": "5a628d2",
+  "run_at": "2026-09-26T03:09:00+00:00",
+  "commit": "8a81260",
   "dirty": true,
   "mode": "rules",
   "by_label": [
@@ -8,11 +8,6 @@
       "label": "verified",
       "matched": 11,
       "total": 11
-    },
-    {
-      "label": "exploratory",
-      "matched": 0,
-      "total": 0
     },
     {
       "label": "blocked",

@@ -15,8 +15,18 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useApi } from "@/hooks/use-api";
 import type { Passport } from "@/lib/api";
-import { getLineage, getPassport } from "@/lib/client";
-import { formatDateTime, formatDelta, formatIndicatorValue, formatPeriod, formatTarget, pick } from "@/lib/format";
+import { getDatasets, getLineage, getPassport } from "@/lib/client";
+import {
+  formatCell,
+  formatDateTime,
+  formatDelta,
+  formatIndicatorValue,
+  formatNumber,
+  formatPeriod,
+  formatTarget,
+  pick,
+  summariseRanges,
+} from "@/lib/format";
 import { statusTone } from "@/lib/labels";
 
 import { TrendChart } from "./trend-chart";
@@ -48,6 +58,11 @@ export function PassportView({
   const computable = p?.state === "computable";
   const lineage = useApi(computable ? `lineage:${code}` : null, () => getLineage(code, 12));
   const rows = lineage.data?.code === code ? lineage.data : undefined;
+  const datasets = useApi("datasets", getDatasets);
+  const datasetName = (key: string) => {
+    const d = datasets.data?.find((x) => x.key === key);
+    return d ? pick(d.name, locale) : key;
+  };
 
   if (!p) {
     if (passport.error) return <ErrorState error={passport.error} onRetry={passport.reload} />;
@@ -193,12 +208,22 @@ export function PassportView({
           <ul className="lineage-list">
             {p.lineage.map((l) => {
               const synthetic = p.sources.find((s) => s.source_id === l.source_id)?.synthetic ?? /SINTETIKE/i.test(l.filename);
+              const ranges = summariseRanges(l.row_ranges);
               return (
                 <li key={`${l.source_id}-${l.row_ranges}`}>
                   <FileSpreadsheet aria-hidden />
                   <div>
                     <span className="lineage-file">{l.filename}</span>
-                    <span className="lineage-rows">{t("passport.lineageRows", { count: l.row_count, ranges: l.row_ranges })}</span>
+                    <span className="lineage-rows">
+                      {t("passport.lineageRows", { rows: formatNumber(l.row_count, locale), count: l.row_count, ranges: ranges.text })}
+                      {ranges.more > 0 && <> {t("passport.rangesMore", { count: ranges.more })}</>}
+                    </span>
+                    {ranges.more > 0 && (
+                      <details className="lineage-all">
+                        <summary>{t("passport.rangesAll")}</summary>
+                        <p>{ranges.all.join(", ")}</p>
+                      </details>
+                    )}
                     <span className="lineage-hash">
                       <Fingerprint aria-hidden />
                       {t("passport.hash")} {l.file_hash.slice(0, 12)}…
@@ -224,7 +249,7 @@ export function PassportView({
           ) : (
             <>
               <p className="fine-print">
-                {t("passport.sourceRowsNote", { shown: rows.rows.length, total: rows.total })}
+                {t("passport.sourceRowsNote", { shown: formatNumber(rows.rows.length, locale), total: formatNumber(rows.total, locale) })}
               </p>
               <div className="table-scroll source-rows" tabIndex={0} role="region" aria-label={t("passport.sourceRows")}>
                 <table className="data-table compact mono-table">
@@ -232,7 +257,7 @@ export function PassportView({
                     <tr>
                       <th scope="col">{t("passport.rowNo")}</th>
                       {rows.columns.map((c) => (
-                        <th scope="col" key={c}>
+                        <th scope="col" key={c} className={typeof rows.rows[0]?.values[c] === "number" ? "numeric" : undefined}>
                           {c}
                         </th>
                       ))}
@@ -245,7 +270,7 @@ export function PassportView({
                         <td className="row-no">{r.row_no}</td>
                         {rows.columns.map((c) => (
                           <td key={c} className={typeof r.values[c] === "number" ? "numeric" : ""}>
-                            {r.values[c] == null ? "–" : String(r.values[c])}
+                            {formatCell(r.values[c], locale)}
                           </td>
                         ))}
                         <td className="file-cell">{r.source_file}</td>
@@ -283,7 +308,7 @@ export function PassportView({
         <dl>
           <div>
             <dt>{t("passport.required")}</dt>
-            <dd>{p.required_datasets.join(" · ")}</dd>
+            <dd>{p.required_datasets.map(datasetName).join(" · ")}</dd>
           </div>
           {p.computed_at && (
             <div>

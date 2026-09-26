@@ -32,3 +32,21 @@ def test_seed_then_seed_all(settings_env, capsys):
     con = get_db()
     assert con.execute("SELECT count(*) FROM source").fetchone()[0] == 6
     assert con.execute("SELECT count(*) FROM mapping_recipe").fetchone()[0] == 0
+
+
+def test_seed_if_empty_keeps_loaded_data(settings_env, capsys):
+    seed = load_script()
+    assert seed.main(["--if-empty"]) == 0  # empty database: seeds the preload files
+    assert "Coverage: 6/13" in capsys.readouterr().out
+
+    from app.warehouse.db import get_db
+
+    con = get_db()
+    con.execute("UPDATE source SET filename = 'kept.xlsx' WHERE dataset = 'requests'")
+    assert seed.main(["--if-empty", "--all"]) == 0  # already seeded: nothing happens
+    assert "nothing to seed" in capsys.readouterr().out
+    con = get_db()
+    assert con.execute("SELECT count(*) FROM source").fetchone()[0] == 3
+    assert con.execute("SELECT count(*) FROM source WHERE filename = 'kept.xlsx'").fetchone() == (
+        1,
+    )
