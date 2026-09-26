@@ -16,4 +16,5 @@ COPY eval_result.json ./eval_result.json
 EXPOSE 8000
 # Seed the demo (requests + budget + population, 6/13) only when the database is empty, so a
 # restart keeps what was uploaded; POST /api/v1/demo/reset restores the start state.
-CMD ["sh", "-c", "python scripts/seed_demo.py --if-empty && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Hosts such as Render pass the port in $PORT; docker compose uses the 8000 default.
+CMD ["sh", "-c", "python scripts/seed_demo.py --if-empty && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]

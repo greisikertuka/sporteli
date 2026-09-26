@@ -1,0 +1,40 @@
+# Render Blueprint for the Sportel API (FastAPI + DuckDB), built from api/Dockerfile.
+# Render dashboard → New → Blueprint → pick this repository.
+#
+# Free plan limits: the service sleeps after 15 minutes without traffic (the first request after
+# that takes about a minute), and the disk is not persistent. Every start seeds the demo state
+# (6/13) again, so uploads last only until the next sleep or deploy. The web app switches to
+# REPLAY while the API is unreachable, so open /api/v1/health a minute before a demo.
+services:
+  - type: web
+    name: sportel-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    envVars:
+      # The Vercel URL of the web app, e.g. https://sportel.vercel.app (comma-separated list).
+      - key: CORS_ORIGINS
+        sync: false
+      # The organisers' key. Leave empty for RULES mode (nothing is sent to any AI service).
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://llm.mjovanovic.dev/v1
+      - key: LLM_PROVIDER
+        value: auto
+      - key: OPENAI_MODEL_FAST
+        value: gpt-5-mini
+      - key: OPENAI_MODEL_SMART
+        value: gpt-5-mini
+      - key: LLM_BUDGET_USD
+        value: "6"
+      - key: LLM_SEND_SAMPLES
+        value: "false"
+      # The demo flow uses the reset button on /ingest; the data is synthetic.
+      - key: DEMO_RESET_ENABLED
+        value: "true"
