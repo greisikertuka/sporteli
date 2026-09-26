@@ -156,6 +156,20 @@ Bash, run `cmd //c "pnpm --dir web dev"`.
 database on first start (only when it is empty) and keeps it in the `pulse-data` volume. The web
 image bakes in `NEXT_PUBLIC_API_URL=http://localhost:8000`. For a live demo we use localhost.
 
+**Hosted demo.** Web on Vercel: <https://sportel.vercel.app>. API on Render (free plan):
+<https://sportel-api.onrender.com> (docs at `/docs`).
+
+- **API (Render).** `render.yaml` is a Blueprint that builds `api/Dockerfile` from
+  `AI4Society-Hachathon/Team-Firmat` and redeploys on every push to `main`. Set `CORS_ORIGINS` (the
+  Vercel URL) and optionally `OPENAI_API_KEY` in the Render dashboard. The free plan sleeps
+  after 15 minutes without traffic (the first request then takes about a minute) and has no
+  persistent disk, so each start re-seeds the demo state (6/13). The LLM spend counter also
+  restarts from zero. Open `/api/v1/health` a minute before a demo.
+- **Web (Vercel).** Project `sportel` with root directory `web`, built from
+  `greisikertuka/sporteli` (Vercel's Hobby plan cannot build private organisation repos). The
+  production branch is `main`, and `NEXT_PUBLIC_API_URL=https://sportel-api.onrender.com` is set
+  in the project. Push `main` to both remotes so the web app and the API stay on the same commit.
+
 **Web-only checks.**
 
 ```bash
