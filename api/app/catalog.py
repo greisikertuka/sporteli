@@ -14,6 +14,7 @@ import datetime as dt
 import math
 import re
 import unicodedata
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -1048,13 +1049,51 @@ _NUM_STRIP_RE = re.compile(r"[^\d,.\-+]")
 _MISSING_TOKENS = {"", "-", "–", "—", "n/a", "na", "nan", "null", "none", "..", "...", "x"}
 
 
-def parse_number(value: object) -> float | None:
+_SQ_STYLE_RE = re.compile(r"\d,\d{1,2}$|\d,\d{4,}$|\.\d{3},\d+$|\d\.\d{3}\.\d{3}")
+_EN_STYLE_RE = re.compile(r",\d{3}\.\d+$|\d,\d{3},\d{3}")
+_DOT_DECIMAL_RE = re.compile(r"^-?\d+\.(\d{1,2}|\d{4,})$")
+
+
+def number_style(values: Iterable[object]) -> str | None:
+    """The number style of a column, decided once from all its text values.
+
+    ``"sq"`` (decimal comma, dot thousands: "1.234,5") when some value can only be read that
+    way, ``"en"`` (decimal dot, comma thousands: "1,234.5", or dot decimals such as "2.12"
+    in a column without commas) likewise, ``None`` when the column is ambiguous or mixed (the
+    per-value heuristic of ``parse_number`` then applies).
+    """
+    sq = en = dot_decimal = has_comma = False
+    for v in values:
+        if not isinstance(v, str):
+            continue
+        s = _NUM_STRIP_RE.sub("", v.replace(" ", "").replace(" ", "")).lstrip("+")
+        if not any(ch.isdigit() for ch in s):
+            continue
+        has_comma = has_comma or "," in s
+        sq = sq or bool(_SQ_STYLE_RE.search(s))
+        en = en or bool(_EN_STYLE_RE.search(s))
+        dot_decimal = dot_decimal or bool(_DOT_DECIMAL_RE.match(s))
+    if dot_decimal and not has_comma:
+        en = True
+    if sq and not en:
+        return "sq"
+    if en and not sq:
+        return "en"
+    return None
+
+
+def parse_number(value: object, style: str | None = None) -> float | None:
     """Parse a number written in Albanian or English style.
 
     Handles decimal comma ("1.234,5"), thousands dots ("1.234" → 1234), English style
     ("1,234.5"), spaces/non-breaking spaces, units and currency ("12 lekë", "85%"), and
     accounting negatives ("(1.234)"). Returns None for blanks and dashes; raises ValueError
     for text that is not a number.
+
+    ``style`` is the column's style from ``number_style``: with ``"en"`` a dot is always the
+    decimal point ("2.125" → 2.125, "1,234" → 1234); with ``"sq"`` a comma is always the
+    decimal comma. Without it each value is read on its own, which is ambiguous for "2.125"
+    (read as 2125) and "1,234" (read as 1.234).
     """
     if value is None or isinstance(value, bool):
         return None
@@ -1072,7 +1111,11 @@ def parse_number(value: object) -> float | None:
         s = s[1:]
     if s.count("-") > 1 or ("-" in s and not s.startswith("-")):
         raise ValueError(f"not a number: {value!r}")
-    if "," in s and "." in s:
+    if style == "en" and s.replace(",", "").count(".") <= 1:
+        s = s.replace(",", "")
+    elif style == "sq" and s.count(",") == 1:
+        s = s.replace(".", "").replace(",", ".")
+    elif "," in s and "." in s:
         if s.rfind(",") > s.rfind("."):  # 1.234,5
             s = s.replace(".", "").replace(",", ".")
         else:  # 1,234.5
@@ -1090,8 +1133,8 @@ def parse_number(value: object) -> float | None:
     return -f if negative else f
 
 
-def parse_int(value: object) -> int | None:
-    f = parse_number(value)
+def parse_int(value: object, style: str | None = None) -> int | None:
+    f = parse_number(value, style)
     return None if f is None else int(round(f))
 
 
@@ -1260,11 +1303,19 @@ def unit_multiplier_from_text(text: object) -> int:
     return 1
 
 
-def coerce_value(dataset: str, field_key: str, raw: object, *, multiplier: float = 1) -> object:
+def coerce_value(
+    dataset: str,
+    field_key: str,
+    raw: object,
+    *,
+    multiplier: float = 1,
+    number_style: str | None = None,
+) -> object:
     """Coerce one raw cell to the canonical type/normalisation of ``dataset.field_key``.
 
     Returns None for blanks; raises ValueError for values that cannot be parsed.
-    ``multiplier`` is applied to money fields only.
+    ``multiplier`` is applied to money fields only; ``number_style`` is the column's number
+    style (see ``number_style``).
     """
     f = get_dataset(dataset).field(field_key)
     if f.normalizer == "month":
@@ -1272,12 +1323,12 @@ def coerce_value(dataset: str, field_key: str, raw: object, *, multiplier: float
     if f.type == "date":
         return parse_date(raw)
     if f.type == "float":
-        num = parse_number(raw)
+        num = parse_number(raw, number_style)
         if num is None:
             return None
         return num * multiplier if f.money else num
     if f.type == "int":
-        return parse_int(raw)
+        return parse_int(raw, number_style)
     # strings
     if raw is None:
         return None
@@ -1301,6 +1352,7 @@ def coerce_value(dataset: str, field_key: str, raw: object, *, multiplier: float
 
 
 __all__ = [
+    "number_style",
     "ADMIN_UNITS",
     "AREAS",
     "DATASETS",

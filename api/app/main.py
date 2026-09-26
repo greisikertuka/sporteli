@@ -37,13 +37,13 @@ def create_app() -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    install_error_handlers(app)  # before CORS, so CORS headers wrap every error response
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    install_error_handlers(app)
     for router in (meta_router, ingest_router, indicators_router, copilot_router):
         app.include_router(router, prefix=API_PREFIX)
     return app

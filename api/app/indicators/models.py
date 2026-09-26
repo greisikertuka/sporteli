@@ -71,6 +71,12 @@ class IndicatorSummary(BaseModel):
     signals: list[SignalOut]
     sources: list[SourceRefOut]
     smp_ref: str | None
+    # additive (not in the contract's minimum shape): how to read the SMP chip, the period
+    # and the sparkline/series
+    smp_kind: Literal["direct", "internal_view"] = "direct"
+    smp_note: L10n | None = None
+    period_kind: Literal["ytd", "point"] = "ytd"
+    series_kind: Literal["monthly", "ytd_running"] = "monthly"
     version: str
     formula_status: FormulaStatus
     basis: str | None

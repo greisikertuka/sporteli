@@ -354,6 +354,14 @@ def _mask_digits(m: re.Match) -> str:
     return s[:2] + "•" * (len(s) - 4) + s[-2:]
 
 
+def mask_personal(text: str) -> str:
+    """Mask e-mails, personal ID numbers and phone numbers in free text (title, note and total
+    rows), keeping everything else, amounts included."""
+    text = EMAIL_RE.sub("[email]", text)
+    text = PERSONAL_ID_RE.sub("[nr. personal]", text)
+    return PHONE_RE.sub("[telefon]", text)
+
+
 def mask_sample(text: str, limit: int = 60) -> str:
     """Mask identifiers and long digit runs: "2526229.1" → "25•••29.1"."""
     text = EMAIL_RE.sub("[email]", text)

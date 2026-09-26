@@ -38,19 +38,30 @@ from app.config import get_settings
 from app.indicators import registry as reg
 from app.ingest import mapper, recipes
 from app.ingest.errors import IngestError
-from app.ingest.layout import ExcludedRow, Layout, analyse, total_kind
+from app.ingest.layout import (
+    ExcludedRow,
+    Layout,
+    analyse,
+    display_cells,
+    row_text,
+    total_kind,
+)
 from app.ingest.mapper import Suggestion
-from app.ingest.pii import PII_LABELS, PiiFinding, detect
+from app.ingest.pii import PII_LABELS, PiiFinding, detect, mask_personal
 from app.ingest.profile import ColumnProfile, profile_column
 from app.ingest.reader import RawTable, read_table, sanitize_filename
 from app.llm.client import get_llm
 from app.warehouse.db import insert_rows, new_cursor
-from app.warehouse.schema import reset_schema
+from app.warehouse.schema import clear_tables, ensure_schema, table_columns
 
 PREVIEW_TTL_S = 30 * 60
 PREVIEW_CACHE_MAX = 24
-RECONCILE_TOLERANCE = 0.005
-"""Relative tolerance (0.5%) between the loaded sum and the file's total row."""
+RECONCILE_HALF_UNIT = 0.5
+"""Reconciliation tolerance in units of the column's multiplier: half a unit of the file's
+precision (0.5 lek, or 500 lek for a column in thousands), i.e. rounding only. A dropped row
+of any real size shows up as a mismatch."""
+RECONCILE_EPSILON = 1e-9
+"""Relative float epsilon added to the tolerance (summing doubles)."""
 MAX_EXCLUDED_LISTED = 100
 
 L10n = dict[str, str]
@@ -83,16 +94,18 @@ _FORMAT_LABELS = {
     "code": t("kode me zero në fillim", "codes with leading zeros"),
 }
 
-_REPLACE_KEY: dict[str, str | None] = {
-    "requests": "request_id",
-    "budget": "month",
-    "waste": "month",
-    "revenue": "month",
-    "population": "basis",
+_REPLACE_KEY: dict[str, tuple[str, ...] | None] = {
+    "requests": ("request_id",),
+    "budget": ("month", "programme_code", "line_type"),
+    "waste": ("month", "admin_unit"),
+    "revenue": ("month", "revenue_type", "payer_type"),
+    "population": ("basis", "admin_unit"),
     "staff": None,  # a staff export is a snapshot: the newest one replaces the previous
 }
-"""Natural key per dataset: a new load replaces earlier rows with the same key (no double
-counting when the same export, or a corrected one, is loaded again)."""
+"""Composite natural key per dataset: a new load replaces earlier rows with the same key tuple
+(no double counting when the same export, or a corrected one, is loaded again). A partial or
+correction export only replaces the rows it carries: other units, programmes or revenue lines
+of the same month stay. Key fields the new file does not map are left out of the match."""
 
 _YEAR_RE = re.compile(r"\b(20\d{2})\b")
 _NUMBER_IN_TEXT_RE = re.compile(r"\d[\d.,  ]*")
@@ -186,6 +199,10 @@ class PreviewState:
     @property
     def column_index(self) -> dict[str, int]:
         return {c.name: c.index for c in self.columns}
+
+    def number_style(self, idx: int) -> str | None:
+        """The number style (``sq``/``en``/None) profiled for column ``idx``."""
+        return self.columns[idx].number_style if 0 <= idx < len(self.columns) else None
 
     def api(self) -> dict:
         ds = get_dataset(self.dataset) if self.dataset else None
@@ -368,7 +385,7 @@ def _read_phase(data: bytes, filename: str, use_llm: bool) -> PreviewState:
             )
         parts = []
         if grand:
-            label = next((v for v in grand.cells if isinstance(v, str)), "TOTALI")
+            label = mask_personal(next((v for v in grand.cells if isinstance(v, str)), "TOTALI"))
             parts.append(
                 f"{counts['total_row']} total ('{label}', rreshti {grand.row_no}) — "
                 "ruhet për rakordim"
@@ -406,6 +423,30 @@ def _read_phase(data: bytes, filename: str, use_llm: bool) -> PreviewState:
             if j < len(e.cells):
                 e.cells[j] = None
     del values
+    # The texts of set-aside rows were built before the gate: rebuild those below the header
+    # from the cleaned cells, and mask e-mails, personal IDs and phones in every one of them
+    # (a footer "Përgatiti: …, tel. 069 …" is not a column the gate can drop).
+    first_header = layout.header_rows[0] if layout.header_rows else layout.header_row
+    for e in layout.excluded:
+        if not e.text:
+            continue
+        if pii and e.row_no > first_header:
+            e.text = row_text(e.cells)
+        e.text = mask_personal(e.text)
+    layout.title_texts = [mask_personal(x) for x in layout.title_texts]
+
+    def number_at(j: int, text: str) -> float | None:
+        col = columns[j] if j < len(columns) else None
+        if col is None or col.dropped or col.inferred_type not in ("int", "float"):
+            return None
+        try:
+            return catalog.parse_number(text, col.number_style)
+        except (ValueError, TypeError):
+            return None
+
+    for e in layout.excluded:
+        if e.reason in ("total_row", "subtotal"):
+            e.display = display_cells(e.cells, number_at)
 
     def pii_msg(loc: str) -> str:
         sq = loc == "sq"
@@ -940,7 +981,10 @@ def remap(preview_id: str, dataset: str, *, con: Cursor | None = None) -> dict:
 
 
 def _ensure_receipt_column(con: Cursor) -> None:
-    con.execute("ALTER TABLE source ADD COLUMN IF NOT EXISTS receipt_json VARCHAR")
+    """Add ``source.receipt_json`` to a warehouse created before it existed. Only a read unless
+    the column is missing (an ALTER on every read would conflict with an open reset)."""
+    if "receipt_json" not in table_columns(con, "source"):
+        con.execute("ALTER TABLE source ADD COLUMN IF NOT EXISTS receipt_json VARCHAR")
 
 
 def _normalise_mapping(mapping: Iterable[Any]) -> list[tuple[str, str | None]]:
@@ -999,34 +1043,109 @@ def _validate_mapping(
     return fields
 
 
-def _coerce(ds: Dataset, key: str, raw: Any, mult: int, default_year: int | None) -> Any:
+def _coerce(
+    ds: Dataset,
+    key: str,
+    raw: Any,
+    mult: int,
+    default_year: int | None,
+    style: str | None = None,
+) -> Any:
     f = ds.field(key)
     try:
-        return catalog.coerce_value(ds.key, key, raw, multiplier=mult if f.money else 1)
+        return catalog.coerce_value(
+            ds.key, key, raw, multiplier=mult if f.money else 1, number_style=style
+        )
     except (ValueError, TypeError, OverflowError):
         if f.normalizer == "month" and default_year:
             return catalog.parse_month(raw, default_year=default_year)  # may raise again
         raise
 
 
-def _supersede(con: Cursor, ds: Dataset, records: list[dict]) -> list[dict]:
-    """Delete earlier rows with the same natural key; report what was replaced."""
-    key = _REPLACE_KEY.get(ds.key, "__none__")
-    if key == "__none__":
+def _replace_keys(ds: Dataset, mapped: Iterable[str]) -> tuple[str, ...] | None:
+    """The key fields used to replace earlier rows: the dataset's natural key restricted to the
+    fields this file maps (``None`` = snapshot, replace everything; ``()`` = replace nothing)."""
+    spec = _REPLACE_KEY.get(ds.key, ())
+    if spec is None:
+        return None
+    present = set(mapped)
+    return tuple(k for k in spec if k in present)
+
+
+def _mark_partly_replaced(
+    con: Cursor, sid: str, rows_replaced: int, remaining: int, by: str
+) -> None:
+    """An earlier source lost some (not all) of its rows to a newer load: its reconciliation
+    against its own total row no longer describes the stored rows, so mark it stale."""
+    row = con.execute(
+        "SELECT reconciliation_json, receipt_json FROM source WHERE id = ?", [sid]
+    ).fetchone()
+    if not row:
+        return
+    note = t(
+        f"{_n(rows_replaced, 'sq')} rreshta të këtij skedari u zëvendësuan nga një ngarkim i "
+        f"mëvonshëm ({by}); rakordimi me totalin e skedarit nuk vlen më për rreshtat e ruajtur.",
+        f"{_n(rows_replaced, 'en')} rows of this file were replaced by a later load ({by}); the "
+        "reconciliation with the file's total no longer describes the stored rows.",
+    )
+    recon = _json(row[0], [])
+    if isinstance(recon, list):
+        for item in recon:
+            if isinstance(item, dict):
+                item["stale"] = True
+                item["note"] = note
+    receipt = _json(row[1], None)
+    receipt_json = row[1]
+    if isinstance(receipt, dict):
+        receipt["reconciliation"] = recon
+        receipt["rows_current"] = remaining
+        receipt.setdefault("superseded_by", []).append({"source_id": by, "rows": rows_replaced})
+        receipt_json = json.dumps(receipt, ensure_ascii=False, default=str)
+    con.execute(
+        "UPDATE source SET reconciliation_json = ?, receipt_json = ? WHERE id = ?",
+        [json.dumps(recon, ensure_ascii=False), receipt_json, sid],
+    )
+
+
+def _supersede(
+    con: Cursor,
+    ds: Dataset,
+    records: list[dict],
+    mapped: Iterable[str],
+    new_source_id: str,
+) -> list[dict]:
+    """Delete earlier rows with the same natural key tuple; report what was replaced."""
+    keys = _replace_keys(ds, mapped)
+    if keys == ():
         return []
     view = f"_supersede_keys_{threading.get_ident()}"
     registered = False
-    if key is None:
+    if keys is None:
         where = "TRUE"
     else:
-        values = sorted({r[key] for r in records if r.get(key) is not None})
-        if not values:
+        tuples = list(
+            dict.fromkeys(
+                tuple(r.get(k) for k in keys)
+                for r in records
+                if any(r.get(k) is not None for k in keys)
+            )
+        )
+        if not tuples:
             return []
-        # an Arrow table, not a list parameter: DuckDB inspects every list element
-        arrow_type = pa.date32() if ds.field(key).type == "date" else pa.string()
-        con.register(view, pa.table({"k": pa.array(values, type=arrow_type)}))
+        # an Arrow table of key tuples, not list parameters: DuckDB inspects every list element
+        arrays = {
+            f"k{i}": pa.array(
+                [tup[i] for tup in tuples],
+                type=pa.date32() if ds.field(k).type == "date" else pa.string(),
+            )
+            for i, k in enumerate(keys)
+        }
+        con.register(view, pa.table(arrays))
         registered = True
-        where = f"{key} IN (SELECT k FROM {view})"
+        cond = " AND ".join(
+            f"{ds.table}.{k} IS NOT DISTINCT FROM v.k{i}" for i, k in enumerate(keys)
+        )
+        where = f"EXISTS (SELECT 1 FROM {view} AS v WHERE {cond})"
     try:
         hits = con.execute(
             f"SELECT source_id, count(*) FROM {ds.table} WHERE {where} GROUP BY 1 ORDER BY 1"
@@ -1046,12 +1165,16 @@ def _supersede(con: Cursor, ds: Dataset, records: list[dict]) -> list[dict]:
         meta = con.execute("SELECT filename FROM source WHERE id = ?", [sid]).fetchone()
         if remaining == 0:
             con.execute("DELETE FROM source WHERE id = ?", [sid])
+        else:
+            _mark_partly_replaced(con, sid, int(n), int(remaining), new_source_id)
         out.append(
             {
                 "source_id": sid,
                 "filename": meta[0] if meta else sid,
                 "rows": int(n),
                 "source_removed": remaining == 0,
+                "rows_remaining": int(remaining),
+                "key": list(keys) if keys else [],
             }
         )
     return out
@@ -1073,13 +1196,37 @@ def _first_number(cells: list[Any]) -> float | None:
     return None
 
 
+def _excluded_sum(
+    ds: Dataset, state: PreviewState, key: str, idx: int, invalid: list[list[Any]]
+) -> float:
+    """Sum of the readable values of ``key`` in data rows that were not loaded (invalid)."""
+    total = 0.0
+    for cells in invalid:
+        raw = cells[idx] if idx < len(cells) else None
+        try:
+            v = _coerce(
+                ds, key, raw, state.layout.col_multiplier[idx], None, state.number_style(idx)
+            )
+        except (ValueError, TypeError, OverflowError):
+            continue
+        if isinstance(v, int | float) and not isinstance(v, bool):
+            total += float(v)
+    return round(total, 6)
+
+
 def _reconcile(
     ds: Dataset,
     state: PreviewState,
     fields: Mapping[str, int],
     records: list[dict],
     rows_loaded: int,
+    invalid: list[list[Any]] | None = None,
 ) -> list[dict]:
+    """Loaded sums against the file's total row, to rounding precision.
+
+    The tolerance is half a unit of the column's precision (``RECONCILE_HALF_UNIT`` times the
+    column multiplier) plus a float epsilon, so only rounding passes. Rows that were not loaded
+    (invalid) but carry a value in the field make the check fail and are named in the note."""
     grand: ExcludedRow | None = state.layout.grand_total
     out: list[dict] = []
     for f in ds.fields:
@@ -1088,6 +1235,8 @@ def _reconcile(
         idx = fields[f.key]
         loaded = sum(float(r[f.key]) for r in records if r.get(f.key) is not None)
         loaded = round(loaded, 6)
+        left_out = _excluded_sum(ds, state, f.key, idx, invalid or [])
+        unit = state.layout.col_multiplier[idx] if f.money else 1
         file_total = None
         note = None
         if grand is None:
@@ -1099,7 +1248,14 @@ def _reconcile(
         else:
             raw = grand.cells[idx] if idx < len(grand.cells) else None
             try:
-                v = _coerce(ds, f.key, raw, state.layout.col_multiplier[idx], None)
+                v = _coerce(
+                    ds,
+                    f.key,
+                    raw,
+                    state.layout.col_multiplier[idx],
+                    None,
+                    state.number_style(idx),
+                )
                 file_total = float(v) if v is not None else None
             except (ValueError, TypeError):
                 file_total = None
@@ -1109,17 +1265,34 @@ def _reconcile(
                     "The total row has no value for this column.",
                 )
         ok = True
+        tolerance = RECONCILE_HALF_UNIT * unit
         if file_total is not None:
             diff = abs(loaded - file_total)
-            ok = diff <= RECONCILE_TOLERANCE * max(abs(file_total), 1e-9) or diff < 1e-6
+            tolerance += RECONCILE_EPSILON * max(abs(file_total), 1.0)
+            ok = diff <= tolerance
             if not ok:
                 pct = 100 * diff / abs(file_total) if file_total else 100.0
                 note = t(
-                    f"Shuma e ngarkuar ndryshon nga totali i skedarit me {_n(pct, 'sq', 1)}%. "
-                    "Kontrolloni rreshtat e përjashtuar ose njësinë.",
-                    f"The loaded sum differs from the file's total by {_n(pct, 'en', 1)}%. "
-                    "Check the excluded rows or the unit.",
+                    f"Shuma e ngarkuar ndryshon nga totali i skedarit me {_n(diff, 'sq', 2)} "
+                    f"({_n(pct, 'sq', 2)}%). Kontrolloni rreshtat e përjashtuar ose njësinë.",
+                    f"The loaded sum differs from the file's total by {_n(diff, 'en', 2)} "
+                    f"({_n(pct, 'en', 2)}%). Check the excluded rows or the unit.",
                 )
+        if left_out:
+            ok = False
+            carried_sq = (
+                f"Rreshtat e përjashtuar si të pavlefshëm mbajnë {_n(left_out, 'sq', 2)} në "
+                "këtë fushë; kjo shumë nuk u ngarkua."
+            )
+            carried_en = (
+                f"Excluded (invalid) rows carry {_n(left_out, 'en', 2)} in this field; that "
+                "amount was not loaded."
+            )
+            note = (
+                t(f"{note['sq']} {carried_sq}", f"{note['en']} {carried_en}")
+                if note
+                else t(carried_sq, carried_en)
+            )
         out.append(
             {
                 "field": f.key,
@@ -1128,6 +1301,9 @@ def _reconcile(
                 "loaded_sum": loaded,
                 "ok": ok,
                 "note": note,
+                # additive: what was left out, and the rounding tolerance that was applied
+                "excluded_sum": left_out,
+                "tolerance": round(tolerance, 6),
             }
         )
     if grand is not None and not out:  # no summable field: compare the row count ("2400 …")
@@ -1161,7 +1337,10 @@ def commit_state(
     save_recipe: bool = False,
     *,
     con: Cursor,
+    in_transaction: bool = False,
 ) -> dict:
+    """Load a prepared file (step 8). ``in_transaction=True`` joins the caller's open
+    transaction (the demo reset) instead of opening and committing its own."""
     started = time.perf_counter()
     log = StepLog()
     ds = _check_dataset_key(dataset)
@@ -1183,7 +1362,9 @@ def commit_state(
         for key, idx in fields.items():
             raw = cells[idx] if idx < len(cells) else None
             try:
-                value = _coerce(ds, key, raw, mults[idx], state.default_year)
+                value = _coerce(
+                    ds, key, raw, mults[idx], state.default_year, state.number_style(idx)
+                )
             except (ValueError, TypeError, OverflowError):
                 value = None
                 col_errors.setdefault(key, []).append(row_no)
@@ -1289,13 +1470,17 @@ def commit_state(
     columns = ["source_id", "row_no", *fields]
     if derived and "as_of" not in fields:
         columns.append("as_of")
-    reconciliation = _reconcile(ds, state, fields, records, len(records))
+    invalid_set = set(invalid_rows)
+    invalid_cells = [cells for row_no, cells in state.layout.data if row_no in invalid_set]
+    reconciliation = _reconcile(ds, state, fields, records, len(records), invalid_cells)
     with _WRITE_LOCK:
-        _ensure_receipt_column(con)
+        if not in_transaction:
+            _ensure_receipt_column(con)
         before = reg.states(con)
-        con.execute("BEGIN TRANSACTION")
+        if not in_transaction:
+            con.execute("BEGIN TRANSACTION")
         try:
-            superseded = _supersede(con, ds, records)
+            superseded = _supersede(con, ds, records, fields, source_id)
             inserted = insert_rows(con, ds.table, records, columns) if records else 0
 
             mapping_all = {c.name: None for c in state.usable}
@@ -1341,13 +1526,30 @@ def commit_state(
             if superseded:
                 total_old = sum(s["rows"] for s in superseded)
                 files = _q(sorted({s["filename"] for s in superseded}))
+                key_fields = superseded[0]["key"]
+                if key_fields:
+                    same_sq = (
+                        "me të njëjtin çelës ("
+                        + " + ".join(ds.field(k).label["sq"].lower() for k in key_fields)
+                        + ")"
+                    )
+                    same_en = (
+                        "with the same key ("
+                        + " + ".join(ds.field(k).label["en"].lower() for k in key_fields)
+                        + ")"
+                    )
+                else:
+                    same_sq, same_en = "(gjendje e plotë)", "(a full snapshot)"
+                kept = sum(s["rows_remaining"] for s in superseded)
+                kept_sq = f"; {_n(kept, 'sq')} rreshta të tjerë të tyre mbeten" if kept else ""
+                kept_en = f"; {_n(kept, 'en')} of their other rows stay" if kept else ""
                 log.add(
                     "supersede",
                     "info",
-                    f"{_n(total_old, 'sq')} rreshta të një ngarkimi të mëparshëm ({files}) për "
-                    "të njëjtën periudhë u zëvendësuan — pa numërim të dyfishtë.",
-                    f"{_n(total_old, 'en')} rows from an earlier load ({files}) for the same "
-                    "period were replaced — no double counting.",
+                    f"{_n(total_old, 'sq')} rreshta të një ngarkimi të mëparshëm ({files}) "
+                    f"{same_sq} u zëvendësuan — pa numërim të dyfishtë{kept_sq}.",
+                    f"{_n(total_old, 'en')} rows from an earlier load ({files}) {same_en} were "
+                    f"replaced — no double counting{kept_en}.",
                 )
             log.add(
                 "insert",
@@ -1361,8 +1563,8 @@ def commit_state(
             passed = [r for r in checked if r["ok"]]
             label = "TOTALI"
             if state.layout.grand_total is not None:
-                label = next(
-                    (v for v in state.layout.grand_total.cells if isinstance(v, str)), label
+                label = mask_personal(
+                    next((v for v in state.layout.grand_total.cells if isinstance(v, str)), label)
                 )
             if len(checked) == 1 and checked[0]["field"] == "row_count":
                 rc = checked[0]
@@ -1381,9 +1583,9 @@ def commit_state(
                     "reconcile",
                     "ok" if len(passed) == len(checked) else "warn",
                     f"Rakordimi me rreshtin '{label}': {len(passed)} nga {len(checked)} shuma "
-                    "përputhen (toleranca 0,5%).",
+                    "përputhen (toleranca: vetëm rrumbullakimi).",
                     f"Reconciliation with the '{label}' row: {len(passed)} of {len(checked)} "
-                    "sums match (tolerance 0.5%).",
+                    "sums match (tolerance: rounding only).",
                 )
             else:
                 log.add(
@@ -1490,9 +1692,11 @@ def commit_state(
                     json.dumps(receipt, ensure_ascii=False, default=str),
                 ],
             )
-            con.execute("COMMIT")
+            if not in_transaction:
+                con.execute("COMMIT")
         except Exception:
-            con.execute("ROLLBACK")
+            if not in_transaction:
+                con.execute("ROLLBACK")
             raise
     return receipt
 
@@ -1520,6 +1724,7 @@ def ingest_path(
     save_recipe: bool = False,
     use_llm: bool = False,
     con: Cursor | None = None,
+    in_transaction: bool = False,
 ) -> dict:
     """Preview + commit a file on disk with the proposed mapping (seed, CLI, tests).
 
@@ -1537,7 +1742,9 @@ def ingest_path(
                 f"The dataset of '{p.name}' was not recognised.",
             )
         mapping = [{"column": s.column, "field": s.field} for s in state.suggestions]
-        return commit_state(state, state.dataset, mapping, save_recipe, con=cur)
+        return commit_state(
+            state, state.dataset, mapping, save_recipe, con=cur, in_transaction=in_transaction
+        )
 
 
 # --------------------------------------------------------------------------------------------
@@ -1675,15 +1882,25 @@ def reset_demo(con: Cursor | None = None, *, envelopes: bool = False) -> dict:
             key=lambda f: f["envelope"],
         )
     receipts = []
+    paths = [(sample_path(f["name"]), f.get("dataset_hint")) for f in wanted]
     with _WRITE_LOCK, _with_cursor(con) as cur:
-        reset_schema(cur)
+        ensure_schema(cur)
         _ensure_receipt_column(cur)
+        # One transaction: readers on other cursors see either the old data or the new, never
+        # a missing table or half-loaded coverage (DuckDB MVCC).
+        cur.execute("BEGIN TRANSACTION")
+        try:
+            clear_tables(cur)
+            for path, hint in paths:
+                receipts.append(
+                    ingest_path(path, hint, use_llm=False, con=cur, in_transaction=True)
+                )
+            cov = reg.coverage(cur)
+            cur.execute("COMMIT")
+        except Exception:
+            cur.execute("ROLLBACK")
+            raise
         clear_previews()
-        for f in wanted:
-            receipts.append(
-                ingest_path(sample_path(f["name"]), f.get("dataset_hint"), use_llm=False, con=cur)
-            )
-        cov = reg.coverage(cur)
     return {
         "ok": True,
         "coverage": {"computable": cov["computable"], "total": cov["total"]},

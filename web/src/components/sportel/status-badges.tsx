@@ -16,7 +16,7 @@ function Hint({ label, children }: { label: string; children: React.ReactElement
   );
 }
 
-/** Header status: proof counter, synthetic data, AI mode, REPLAY. */
+/** Header status: REPLAY (first, when on), proof counter, synthetic data, AI mode, API. */
 export function StatusBadges() {
   const t = useTranslations("header");
   const ts = useTranslations("shell");
@@ -26,6 +26,15 @@ export function StatusBadges() {
 
   return (
     <div className="status-badges" role="group" aria-label={ts("status")}>
+      {/* REPLAY first: it must never be the pill that falls off a narrow screen. */}
+      {replay.replay && (
+        <Hint label={replay.reason === "forced" ? t("replayForcedHint") : t("replayOfflineHint")}>
+          <span className="status-pill replay" tabIndex={0} role="status">
+            <History aria-hidden />
+            <span>{t("replay")}</span>
+          </span>
+        </Hint>
+      )}
       {coverage && (
         <Hint label={t("coverageHint")}>
           <Link href="/" className="status-pill proof" aria-live="polite">
@@ -47,14 +56,6 @@ export function StatusBadges() {
           <span className={`status-pill ai ${h.mode === "live" ? "live" : "rules"}`} tabIndex={0}>
             {h.mode === "live" ? <span className="live-dot" aria-hidden /> : <Cpu aria-hidden />}
             <span>{h.mode === "live" ? t("aiLive") : t("aiRules")}</span>
-          </span>
-        </Hint>
-      )}
-      {replay.replay && (
-        <Hint label={replay.reason === "forced" ? t("replayForcedHint") : t("replayOfflineHint")}>
-          <span className="status-pill replay" tabIndex={0} role="status">
-            <History aria-hidden />
-            <span>{t("replay")}</span>
           </span>
         </Hint>
       )}

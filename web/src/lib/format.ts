@@ -256,3 +256,55 @@ export function formatCell(value: string | number | null | undefined, locale: st
   const decimals = Number.isInteger(value) ? 0 : Math.min(3, (String(value).split(".")[1] ?? "").length);
   return formatNumber(value, locale, decimals);
 }
+
+/** The latest month of a period: `2026-01/2026-08` → `2026-08`, `2026-08` → `2026-08`. */
+export function lastMonthOf(period: string | null | undefined): string | null {
+  if (!period) return null;
+  const parts = period.split(/\s*(?:\/|\.\.|–|—)\s*/).filter(Boolean);
+  const last = parts.at(-1) ?? null;
+  return last && /^\d{4}-\d{2}/.test(last) ? last.slice(0, 7) : null;
+}
+
+/** Units whose year-to-date value is a running sum (REQ-01, WST-01, WST-02): the change since a
+ * month earlier is simply that month's own amount, not growth. */
+const ACCUMULATING_UNITS = new Set(["count", "kg_per_resident"]);
+
+export type IndicatorDelta = {
+  /** Signed change in the indicator's unit, e.g. "+337", "−1,3". */
+  text: string;
+  /** "month": the latest month's own contribution to a running total; "change": a comparison
+   * with the value one month earlier. */
+  kind: "month" | "change";
+  /** True for percent indicators: the change is in percentage points. */
+  points: boolean;
+  /** The latest month, formatted ("gusht 2026"). */
+  month: string | null;
+};
+
+/** How the "vs previous" line of a tile or passport should read (code-computed numbers only). */
+export function indicatorDelta(
+  i: { value: number | null; previous: number | null; unit: string; period: string | null; period_kind?: string },
+  locale: string,
+): IndicatorDelta | null {
+  const d = formatDelta(i.value, i.previous, i.unit, locale);
+  if (!d) return null;
+  const month = lastMonthOf(i.period);
+  const running = (i.period_kind ?? "ytd") === "ytd" && ACCUMULATING_UNITS.has(i.unit);
+  return {
+    text: d.text,
+    kind: running ? "month" : "change",
+    points: i.unit === "percent",
+    month: month ? formatPeriod(month, locale) : null,
+  };
+}
+
+/** A token of a set-aside row for display: numbers in the locale's format, text as it is. */
+export function formatRowCells(cells: (string | number | null)[], locale: string): string {
+  const seen: string[] = [];
+  for (const c of cells) {
+    if (c == null || c === "") continue;
+    const text = typeof c === "number" ? formatCell(c, locale) : c;
+    if (!seen.includes(text)) seen.push(text);
+  }
+  return seen.join(" · ");
+}

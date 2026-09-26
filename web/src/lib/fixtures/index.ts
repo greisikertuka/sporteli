@@ -401,7 +401,8 @@ export async function commitIngest(body: CommitBody): Promise<LoadReceipt> {
   const receipt: LoadReceipt = {
     ...clone(recorded),
     recipe: { saved, reused: hit, recipe_id: recipeId },
-    loaded_at: new Date().toISOString(),
+    // the recorded time, never "now": a REPLAY receipt must not read as a live load
+    loaded_at: recorded.loaded_at,
     indicators_unlocked: [],
     coverage: coverageOf(s),
   };

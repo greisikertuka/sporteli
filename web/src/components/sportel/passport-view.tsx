@@ -19,11 +19,11 @@ import { getDatasets, getLineage, getPassport } from "@/lib/client";
 import {
   formatCell,
   formatDateTime,
-  formatDelta,
   formatIndicatorValue,
   formatNumber,
   formatPeriod,
   formatTarget,
+  indicatorDelta,
   pick,
   summariseRanges,
 } from "@/lib/format";
@@ -69,8 +69,39 @@ export function PassportView({
     return <LoadingBlock label={t("common.loading")} rows={6} />;
   }
 
+  /** A signal's check, by its label (never the internal rule id). */
+  const checkLabel = (rule: string) => {
+    const c = p.checks.find((x) => x.rule === rule);
+    return c ? pick(c.label, locale) : null;
+  };
+  /** Source-row columns are canonical field keys: show the dataset's field label instead. */
+  const columnLabel = (key: string) => {
+    const pool = [
+      ...(datasets.data ?? []).filter((d) => p.required_datasets.includes(d.key)),
+      ...(datasets.data ?? []),
+    ];
+    for (const d of pool) {
+      const f = d.fields.find((x) => x.key === key);
+      if (f) return pick(f.label, locale);
+    }
+    return key;
+  };
+  /** Normalised codes stored by the pipeline ("current"/"capital", population bases). */
+  const cellText = (key: string, v: string | number | null) => {
+    if (typeof v === "string") {
+      if (key === "line_type" && (v === "current" || v === "capital")) return t(`passport.values.${v}`);
+      if (key === "basis" && (v === "census_2023" || v === "civil_registry")) return t(`board.basis.${v}`);
+    }
+    return formatCell(v, locale);
+  };
+
   const value = formatIndicatorValue(p.value, p.unit, locale, pick(p.unit_label, locale));
-  const delta = formatDelta(p.value, p.previous, p.unit, locale);
+  const delta = indicatorDelta(p, locale);
+  const deltaText = delta
+    ? delta.kind === "month" && delta.month
+      ? t("tile.inMonth", { delta: delta.text, month: delta.month })
+      : `${delta.text}${delta.points ? ` ${t("tile.pp")}` : ""}`
+    : null;
   const tone = statusTone(p.status);
   const targetText =
     p.target != null
@@ -84,8 +115,16 @@ export function PassportView({
         <div className="passport-chips">
           <CodeChip>{p.code}</CodeChip>
           <span className="passport-area">{pick(p.area.name, locale)}</span>
-          {p.smp_ref && <ToneChip tone="info">{p.smp_ref}</ToneChip>}
+          {p.smp_ref &&
+            (p.smp_kind === "internal_view" ? (
+              <ToneChip tone="neutral" className="smp-internal">
+                ≈ {p.smp_ref} · {t("tile.smpInternal")}
+              </ToneChip>
+            ) : (
+              <ToneChip tone="info">{p.smp_ref}</ToneChip>
+            ))}
         </div>
+        {p.smp_kind === "internal_view" && p.smp_note && <p className="passport-hint">{pick(p.smp_note, locale)}</p>}
         {variant === "page" ? (
           <h1 className="display-title passport-title">{pick(p.name, locale)}</h1>
         ) : (
@@ -129,7 +168,7 @@ export function PassportView({
                 <dt>{t("passport.previous")}</dt>
                 <dd>
                   {formatIndicatorValue(p.previous, p.unit, locale, pick(p.unit_label, locale)).text}{" "}
-                  <span className="muted">({delta.text})</span>
+                  <span className="muted">({deltaText})</span>
                 </dd>
               </div>
             )}
@@ -169,6 +208,7 @@ export function PassportView({
             unitLabel={pick(p.unit_label, locale)}
             target={p.target}
             name={pick(p.name, locale)}
+            seriesKind={p.series_kind}
             height={variant === "page" ? 280 : 220}
           />
         </section>
@@ -183,7 +223,7 @@ export function PassportView({
                 <AlertTriangle aria-hidden />
                 <span>
                   {pick(s.message, locale)}
-                  <small>{s.rule}</small>
+                  {checkLabel(s.rule) && <small>{checkLabel(s.rule)}</small>}
                 </span>
               </li>
             ))}
@@ -262,7 +302,7 @@ export function PassportView({
                       <th scope="col">{t("passport.rowNo")}</th>
                       {rows.columns.map((c) => (
                         <th scope="col" key={c} className={typeof rows.rows[0]?.values[c] === "number" ? "numeric" : undefined}>
-                          {c}
+                          {columnLabel(c)}
                         </th>
                       ))}
                       <th scope="col">{t("passport.file")}</th>
@@ -274,7 +314,7 @@ export function PassportView({
                         <td className="row-no">{r.row_no}</td>
                         {rows.columns.map((c) => (
                           <td key={c} className={typeof r.values[c] === "number" ? "numeric" : ""}>
-                            {formatCell(r.values[c], locale)}
+                            {cellText(c, r.values[c])}
                           </td>
                         ))}
                         <td className="file-cell">{r.source_file}</td>

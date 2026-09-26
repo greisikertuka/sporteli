@@ -36,7 +36,8 @@
     "apiChecking": "Duke kontrolluar API…",
     "apiForced": "API e çaktivizuar",
     "coverage": "{computable}/{total} me provë",
-    "coverageHint": "Tregues me provë nga eksportet e ngarkuara"
+    "coverageHint": "Tregues me provë nga eksportet e ngarkuara",
+    "replayStamp": "përgjigje e regjistruar nga API-ja mbi të dhënat sintetike, jo llogaritje live"
   },
   "shell": {
     "skip": "Kalo te përmbajtja",
@@ -88,7 +89,7 @@
       "offTitle": "Tregues jashtë objektivit",
       "offDetail": "{value} kundrejt objektivit {target}",
       "offNone": "Asnjë tregues me objektiv nuk është jashtë tij.",
-      "note": "Rendi: sa tregues zhbllokon eksporti dhe sa larg objektivit është vlera."
+      "note": "Rendi: sa tregues zhbllokon eksporti dhe sa larg objektivit është vlera. Përgjegjësit janë role të përkohshme, për t'u konfirmuar me bashkinë."
     },
     "trend": {
       "title": "Ecuria",
@@ -99,7 +100,11 @@
       "period": "Periudha",
       "value": "Vlera",
       "empty": "Asnjë tregues i llogaritshëm ende.",
-      "summary": "{name}: seria mujore për {period}. Tabela përmban vlerat e sakta."
+      "summary": "{name}: seria {kind} për {period}. Tabela përmban vlerat e sakta.",
+      "kindMonthly": "Vlera mujore: çdo pikë është vetëm ai muaj.",
+      "kindYtd": "Kumulative nga janari: çdo pikë është vlera nga janari deri në fund të atij muaji.",
+      "kindWordMonthly": "mujore",
+      "kindWordYtd": "kumulative nga janari"
     },
     "signals": {
       "title": "Sinjale për verifikim",
@@ -121,14 +126,18 @@
     "no_target": "Pa objektiv",
     "target": "objektivi {value}",
     "targetMax": "objektivi ≤ {value}",
-    "vsPrevious": "{delta} ndaj periudhës së mëparshme",
+    "vsPrevious": "{delta} ndaj një muaji më parë",
     "signals": "{count, plural, one {# sinjal} other {# sinjale}}",
     "missing": "Mungon eksporti",
     "owner": "Përgjegjës: {owner}",
     "upload": "Ngarko eksportin",
     "proven": "Me provë",
     "basis": "baza: {basis}",
-    "draft": "formula draft"
+    "draft": "formula draft",
+    "inMonth": "{delta} në {month}",
+    "pp": "pikë përqindjeje",
+    "ownerPlaceholder": "Rol i përkohshëm — për t'u konfirmuar me bashkinë",
+    "smpInternal": "pamje e brendshme"
   },
   "passport": {
     "kicker": "Pasaporta e treguesit · v{version}",
@@ -169,7 +178,11 @@
     "loadingRows": "Duke ngarkuar rreshtat…",
     "computed": "Llogaritur më",
     "rangesMore": "… +{count, plural, one {# interval} other {# intervale}}",
-    "rangesAll": "Shfaq të gjitha intervalet e rreshtave"
+    "rangesAll": "Shfaq të gjitha intervalet e rreshtave",
+    "values": {
+      "current": "korrente",
+      "capital": "kapitale"
+    }
   },
   "ingest": {
     "kicker": "Integrimi · raporto një herë",
@@ -320,7 +333,11 @@
     "footer": "Kodi numëroi çdo rresht. Asnjë numër nuk u shkrua nga AI.",
     "synthetic": "TË DHËNA SINTETIKE",
     "ok": "në rregull",
-    "fail": "nuk përputhet"
+    "fail": "nuk përputhet",
+    "recordedAt": "Regjistruar më",
+    "stale": "Pjesërisht e zëvendësuar nga një ngarkim i mëvonshëm",
+    "excludedSum": "në rreshta të pavlefshëm",
+    "rowsCurrent": "Rreshta që mbeten tani"
   },
   "ask": {
     "kicker": "Pyet të dhënat · katër etiketa",
@@ -355,11 +372,12 @@
     "history": "Pyetjet e mëparshme",
     "changed": "Më parë: {from}",
     "evalChip": "{matched} nga {total}",
-    "evalTitle": "Saktësia në grupin tonë prej {total} pyetjesh — tregues, jo standard",
+    "evalTitle": "Saktësia në grupin tonë prej {total} pyetjesh — vetëm orientuese, jo krahasim standard",
     "evalNote": "Ekzekutuar më {time} · mënyra {mode}",
     "legend": "Çfarë do të thotë etiketa",
     "ask": "Pyet: {question}",
-    "emptyTitle": "Ende pa pyetje"
+    "emptyTitle": "Ende pa pyetje",
+    "askPrefix": "Pyet:"
   },
   "labels": {
     "verified": {
@@ -446,7 +464,8 @@
     "noData": "Raporti ndërtohet kur ka të dhëna nga API ose nga REPLAY.",
     "downloadXlsx": "Shkarko (.xlsx)",
     "openData": "Të dhëna të hapura (.csv)",
-    "sentenceMissing": "{name}: nuk llogaritet ende; mungon eksporti «{dataset}» (përgjegjës: {owner})."
+    "sentenceMissing": "{name}: nuk llogaritet ende; mungon eksporti «{dataset}» (përgjegjës: {owner}).",
+    "ownersNote": "Përgjegjësit janë role të përkohshme; emrat konfirmohen me bashkinë."
   },
   "trust": {
     "kicker": "Besueshmëria",
@@ -475,12 +494,13 @@
     "limitsTitle": "Kufijtë, të thënë hapur",
     "limits": [
       "Çdo formulë është leximi ynë i pasaportave publike derisa ta validojë Njësia e Performancës ose AMVV; deri atëherë shënohet «draft».",
-      "10 tregues SMP janë kontrolle dokumenti (plani ose publikimi ekziston) dhe 7 numërohen nga regjistrat; kërkojnë lidhje dhe konfirmim nga një person.",
+      "$coverage",
       "Treguesit 41–52 llogariten në nivel kombëtar nga AMVV me të dhëna të Ministrisë së Financave; Sportel nuk i llogarit.",
       "Një e dhënë që mungon shënohet «nuk llogaritet» me përgjegjësin e emërtuar; nuk vlerësohet kurrë.",
+      "Përgjegjësit janë role të përkohshme; emrat konfirmohen me bashkinë.",
       "Sportel provon qëndrueshmërinë dhe prejardhjen, jo që skedari i një drejtorie është i vërtetë.",
       "Eksporti ka formë SMP derisa të marrim shabllonin real të AMVV.",
-      "Saktësia vjen nga grupi ynë i ngrirë prej 24 pyetjesh (12 shqip, 12 anglisht, me kurthe): tregues, jo standard.",
+      "$eval",
       "Përputhjet me besueshmëri të ulët kërkojnë gjithmonë një klikim.",
       "Te modeli shkojnë vetëm titujt, statistika të profilit dhe mostra të maskuara, kurrë rreshta.",
       "Pa model, përputhja kalon në rregulla dhe treguesit llogariten njësoj.",
@@ -504,12 +524,18 @@
     "callFailed": "Dështoi",
     "sentSummary": "{headers} tituj · {samples} mostra/kolonë · {rows} rreshta",
     "evalTitle": "Saktësia sipas etiketës",
-    "evalNote": "Grupi ynë prej {total} pyetjesh · tregues, jo standard · {time} · {mode}",
+    "evalNote": "Grupi ynë prej {total} pyetjesh · vetëm orientuese, jo krahasim standard · {time} · {mode}",
     "evalMissing": "Vlerësimi nuk është ekzekutuar ende.",
     "evalRow": "{matched} nga {total}",
     "purpose": {
       "ingest_mapping": "Përputhja e kolonave",
       "copilot_intent": "Leximi i pyetjes"
+    },
+    "limitsDynamic": {
+      "coverage": "{document} tregues SMP janë kontrolle dokumenti (plani ose publikimi ekziston) dhe {manual} numërohen nga regjistrat; kërkojnë lidhje dhe konfirmim nga një person.",
+      "coverageLoading": "Një pjesë e treguesve SMP janë kontrolle dokumenti (plani ose publikimi ekziston) ose numërohen nga regjistrat; kërkojnë lidhje dhe konfirmim nga një person.",
+      "eval": "Saktësia vjen nga grupi ynë i ngrirë prej {total} pyetjesh (shqip dhe anglisht, me kurthe): vetëm orientuese, jo krahasim standard.",
+      "evalLoading": "Saktësia vjen nga grupi ynë i ngrirë i pyetjeve (shqip dhe anglisht, me kurthe): vetëm orientuese, jo krahasim standard."
     }
   },
   "notFound": {

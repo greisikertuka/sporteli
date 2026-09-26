@@ -50,6 +50,11 @@ SUMMARY_KEYS = {
     "formula_status",
     "basis",
     "sparkline",
+    # additive: how to read the SMP chip, the period and the series
+    "smp_kind",
+    "smp_note",
+    "period_kind",
+    "series_kind",
 }
 PASSPORT_KEYS = SUMMARY_KEYS | {
     "formula",

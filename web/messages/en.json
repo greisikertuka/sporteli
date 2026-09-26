@@ -36,7 +36,8 @@
     "apiChecking": "Checking API…",
     "apiForced": "API disabled",
     "coverage": "{computable}/{total} with proof",
-    "coverageHint": "Indicators with proof from the loaded exports"
+    "coverageHint": "Indicators with proof from the loaded exports",
+    "replayStamp": "recorded API response over the synthetic data, not a live computation"
   },
   "shell": {
     "skip": "Skip to content",
@@ -88,7 +89,7 @@
       "offTitle": "Indicators off track",
       "offDetail": "{value} against a target of {target}",
       "offNone": "No indicator with a target is off track.",
-      "note": "Order: how many indicators the export unlocks and how far the value is from target."
+      "note": "Order: how many indicators the export unlocks and how far the value is from target. Owners are placeholder roles, to be confirmed with the municipality."
     },
     "trend": {
       "title": "Trend",
@@ -99,7 +100,11 @@
       "period": "Period",
       "value": "Value",
       "empty": "No computable indicator yet.",
-      "summary": "{name}: monthly series for {period}. The table holds the exact values."
+      "summary": "{name}: {kind} series for {period}. The table holds the exact values.",
+      "kindMonthly": "Monthly values: each point is that month alone.",
+      "kindYtd": "Cumulative from January: each point is the value from January to the end of that month.",
+      "kindWordMonthly": "monthly",
+      "kindWordYtd": "cumulative from January"
     },
     "signals": {
       "title": "Signals to check",
@@ -121,14 +126,18 @@
     "no_target": "No target",
     "target": "target {value}",
     "targetMax": "target ≤ {value}",
-    "vsPrevious": "{delta} vs previous period",
+    "vsPrevious": "{delta} vs a month earlier",
     "signals": "{count, plural, one {# signal} other {# signals}}",
     "missing": "Missing export",
     "owner": "Owner: {owner}",
     "upload": "Upload the export",
     "proven": "With proof",
     "basis": "basis: {basis}",
-    "draft": "draft formula"
+    "draft": "draft formula",
+    "inMonth": "{delta} in {month}",
+    "pp": "pp",
+    "ownerPlaceholder": "Placeholder role — to be confirmed with the municipality",
+    "smpInternal": "internal view"
   },
   "passport": {
     "kicker": "Indicator passport · v{version}",
@@ -169,7 +178,11 @@
     "loadingRows": "Loading rows…",
     "computed": "Computed at",
     "rangesMore": "… +{count, plural, one {# more range} other {# more ranges}}",
-    "rangesAll": "Show every row range"
+    "rangesAll": "Show every row range",
+    "values": {
+      "current": "current",
+      "capital": "capital"
+    }
   },
   "ingest": {
     "kicker": "Integration · report once",
@@ -320,7 +333,11 @@
     "footer": "Code counted every row. No number was written by AI.",
     "synthetic": "SYNTHETIC DATA",
     "ok": "ok",
-    "fail": "mismatch"
+    "fail": "mismatch",
+    "recordedAt": "Recorded at",
+    "stale": "Partly replaced by a later load",
+    "excludedSum": "in invalid rows",
+    "rowsCurrent": "Rows still stored"
   },
   "ask": {
     "kicker": "Ask the data · four labels",
@@ -355,11 +372,12 @@
     "history": "Earlier questions",
     "changed": "Before: {from}",
     "evalChip": "{matched} of {total}",
-    "evalTitle": "Accuracy on our own {total}-question set — indicative, not a benchmark",
+    "evalTitle": "Accuracy on our own {total}-question set — indicative only, not a benchmark",
     "evalNote": "Run at {time} · mode {mode}",
     "legend": "What the label means",
     "ask": "Ask: {question}",
-    "emptyTitle": "No question yet"
+    "emptyTitle": "No question yet",
+    "askPrefix": "Ask:"
   },
   "labels": {
     "verified": {
@@ -446,7 +464,8 @@
     "noData": "The report is built once the API or REPLAY returns data.",
     "downloadXlsx": "Download (.xlsx)",
     "openData": "Open data (.csv)",
-    "sentenceMissing": "{name}: not computable yet; the «{dataset}» export is missing (owner: {owner})."
+    "sentenceMissing": "{name}: not computable yet; the «{dataset}» export is missing (owner: {owner}).",
+    "ownersNote": "Owners are placeholder roles; names are confirmed with the municipality."
   },
   "trust": {
     "kicker": "Trust",
@@ -475,12 +494,13 @@
     "limitsTitle": "Limits, stated openly",
     "limits": [
       "Every formula is our reading of the public passports until the Performance Unit or AMVV validates it; until then it is marked \"draft\".",
-      "10 SMP indicators are document checks (the plan or publication exists) and 7 are counted from registers; they need a link and a person's confirmation.",
+      "$coverage",
       "Indicators 41–52 are computed nationally by AMVV from Ministry of Finance data; Sportel does not compute them.",
       "A missing input is marked \"not computable\" with its owner named; it is never estimated.",
+      "Owners are placeholder roles; names are confirmed with the municipality.",
       "Sportel proves consistency and lineage, not that a department's file is true.",
       "The export is SMP-shaped until we receive AMVV's real template.",
-      "Accuracy comes from our own frozen set of 24 questions (12 Albanian, 12 English, including traps): indicative, not a benchmark.",
+      "$eval",
       "Low-confidence mappings always need a click.",
       "Only headers, profile statistics and masked samples go to the model, never rows.",
       "Without a model, mapping falls back to rules and the indicators compute the same way.",
@@ -504,12 +524,18 @@
     "callFailed": "Failed",
     "sentSummary": "{headers} headers · {samples} samples/column · {rows} rows",
     "evalTitle": "Accuracy by label",
-    "evalNote": "Our own {total}-question set · indicative, not a benchmark · {time} · {mode}",
+    "evalNote": "Our own {total}-question set · indicative only, not a benchmark · {time} · {mode}",
     "evalMissing": "The evaluation has not been run yet.",
     "evalRow": "{matched} of {total}",
     "purpose": {
       "ingest_mapping": "Column mapping",
       "copilot_intent": "Question routing"
+    },
+    "limitsDynamic": {
+      "coverage": "{document} SMP indicators are document checks (the plan or publication exists) and {manual} are counted from registers; they need a link and a person's confirmation.",
+      "coverageLoading": "Some SMP indicators are document checks (the plan or publication exists) or are counted from registers; they need a link and a person's confirmation.",
+      "eval": "Accuracy comes from our own frozen set of {total} questions (Albanian and English, including traps): indicative only, not a benchmark.",
+      "evalLoading": "Accuracy comes from our own frozen question set (Albanian and English, including traps): indicative only, not a benchmark."
     }
   },
   "notFound": {

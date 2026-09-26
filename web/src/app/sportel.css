@@ -385,6 +385,50 @@ a.text-button {
     transform: none;
   }
 }
+/* REPLAY stamp on receipts, answers and previews: recorded, not live. */
+.replay-stamp {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border: 1px dashed #a35c16;
+  border-radius: 8px;
+  background: color-mix(in oklab, #a35c16 8%, var(--card));
+  color: var(--tone-warning-fg);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.replay-stamp svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.replay-stamp-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #fff;
+  background: repeating-linear-gradient(135deg, #8a4b0f 0 8px, #a35c16 8px 16px);
+  font-family: var(--font-mono-stack);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+.receipt .replay-stamp {
+  margin: 8px 0 0;
+  justify-content: center;
+}
+/* FIN-01 approximates SMP #47 (computed by AMVV): its chip must not look like a direct SMP. */
+.tile-smp.internal {
+  border-style: dashed;
+  background: transparent;
+}
+.trend-kind {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
 .replay-note {
   margin: -12px 0 22px;
   font-size: 12.5px;

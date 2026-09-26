@@ -7,8 +7,14 @@
 #   (1 January to the end of the latest month) unless the passport sets `period_kind: point`
 #   (a stock: REQ-03 open overdue at the latest date; HR-01 headcount at the latest date).
 #   The API reports year-to-date periods as an ISO month range ("2026-01/2026-08").
-# - value_sql returns one row (value, period); series_sql returns (period, value) by month;
-#   lineage_sql returns (source_id, row_no) of every contributing row; optional breakdown_sql
+# - value_sql returns one row (value, period); series_sql returns (period, value) by month.
+#   Series values are single-month values unless the passport sets `series_kind: ytd_running`
+#   (a running year-to-date ratio at the end of each month: FIN-01, FIN-02, REV-01, REV-02,
+#   whose single-month ratios swing with billing and payment calendars); the API returns
+#   series_kind so charts can say which one they show.
+# - `smp_kind: internal_view` marks an SMP reference Sportel only approximates (FIN-01 is an
+#   internal view of national indicator #47, computed officially by AMVV).
+# - lineage_sql returns (source_id, row_no) of every contributing row; optional breakdown_sql
 #   returns (period, dimension, value) for unit-level plausibility checks.
 # - Per-capita passports use the named parameter $basis (population.basis:
 #   census_2023 | civil_registry), taken from the definition pin "population_basis".
@@ -328,6 +334,8 @@ passports:
     required_datasets: [budget]
     owner: finance
     smp_ref: "SMP-AL 2024 #47"
+    smp_kind: internal_view
+    series_kind: ytd_running
     smp_note:
       sq: "Pamje e brendshme e treguesit #47; vlera zyrtare llogaritet nga AMVV."
       en: "Internal view of indicator #47; the official value is computed by AMVV."
@@ -394,6 +402,7 @@ passports:
     required_datasets: [budget]
     owner: finance
     smp_ref: null
+    series_kind: ytd_running
     checks: [rate_bounds, off_target, parts_vs_total]
     answer:
       sq: "Nga janari deri në {period}, shpenzimet kapitale janë zbatuar {value} kundrejt planit të periudhës (objektivi: {target})."
@@ -670,6 +679,7 @@ passports:
     required_datasets: [revenue]
     owner: local_revenue
     smp_ref: null
+    series_kind: ytd_running
     checks: [rate_bounds, off_target, parts_vs_total]
     answer:
       sq: "Nga janari deri në {period} janë arkëtuar {value} e të ardhurave vendore të planifikuara (objektivi: {target})."
@@ -733,6 +743,7 @@ passports:
     required_datasets: [revenue, budget]
     owner: local_revenue
     smp_ref: "SMP-AL 2024 #13"
+    series_kind: ytd_running
     checks: [off_target, swing, parts_vs_total]
     answer:
       sq: "Nga janari deri në {period}, tarifa e pastrimit e arkëtuar mbulon {value} të shpenzimeve për menaxhimin e mbetjeve (objektivi: {target})."

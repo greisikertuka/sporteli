@@ -193,4 +193,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):  # a cp1252 Windows console cannot print "→"
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="replace")
     raise SystemExit(main())

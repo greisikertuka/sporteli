@@ -303,20 +303,37 @@ def _is_system_table(name: str, db: str) -> bool:
     )
 
 
+def _literal_limit(root: exp.Expression) -> int | None:
+    limit = root.args.get("limit")
+    if isinstance(limit, exp.Limit) and isinstance(limit.expression, exp.Literal):
+        try:
+            return int(limit.expression.this)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _cap_rows(root: exp.Expression) -> exp.Expression:
-    """Apply ``LIMIT 200`` (keeps a smaller literal limit; wraps set operations)."""
-    if isinstance(root, exp.Select):
-        limit = root.args.get("limit")
-        current = None
-        if isinstance(limit, exp.Limit) and isinstance(limit.expression, exp.Literal):
-            try:
-                current = int(limit.expression.this)
-            except (TypeError, ValueError):
-                current = None
+    """Apply ``LIMIT 200`` (keeps a smaller literal limit; wraps set operations).
+
+    A SELECT with DuckDB's ``USING SAMPLE`` is wrapped too, because sqlglot renders the sample
+    after LIMIT, which DuckDB rejects; its own LIMIT/OFFSET move to the outer query."""
+    if isinstance(root, exp.Select) and not root.args.get("sample"):
+        current = _literal_limit(root)
         if current is not None and 0 <= current <= MAX_ROWS:
             return root
         return root.limit(MAX_ROWS, copy=True)
-    wrapped = exp.select("*").from_(exp.Subquery(this=root.copy(), alias=exp.to_identifier("q")))
+    inner = root.copy()
+    limit, offset = None, None
+    if isinstance(inner, exp.Select) and inner.args.get("sample"):
+        limit, offset = inner.args.get("limit"), inner.args.get("offset")
+        inner.set("limit", None)
+        inner.set("offset", None)
+    wrapped = exp.select("*").from_(exp.Subquery(this=inner, alias=exp.to_identifier("q")))
+    if limit is not None or offset is not None:
+        wrapped.set("limit", limit)
+        wrapped.set("offset", offset)
+        return _cap_rows(wrapped)
     return wrapped.limit(MAX_ROWS)
 
 

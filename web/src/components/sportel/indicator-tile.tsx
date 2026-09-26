@@ -10,13 +10,34 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { IndicatorSummary } from "@/lib/api";
-import { formatDelta, formatIndicatorValue, formatPeriod, formatTarget, pick } from "@/lib/format";
+import { formatIndicatorValue, formatPeriod, formatTarget, indicatorDelta, pick } from "@/lib/format";
 import { statusTone } from "@/lib/labels";
 
 import { CodeChip, Sparkline, SyntheticMark } from "./ui";
 
 /** "SMP-AL 2024 #47" → "SMP #47" on the tile; the full reference stays in the title. */
 const shortSmp = (ref: string) => ref.split("·")[0].replace(/^SMP-AL\s*\d{4}\s*/i, "SMP ").trim();
+
+/** The SMP chip. An internal view (FIN-01 ≈ #47, computed officially by AMVV) reads "≈ SMP #47 ·
+ * internal view" with a dashed border, so it never looks like an SMP value Sportel computes. */
+export function SmpChip({ indicator: i }: { indicator: Pick<IndicatorSummary, "smp_ref" | "smp_kind" | "smp_note"> }) {
+  const t = useTranslations("tile");
+  const locale = useLocale();
+  if (!i.smp_ref) return null;
+  if (i.smp_kind === "internal_view") {
+    const note = i.smp_note ? pick(i.smp_note, locale) : "";
+    return (
+      <span className="tile-smp internal" title={note ? `${i.smp_ref} · ${note}` : i.smp_ref}>
+        ≈ {shortSmp(i.smp_ref)} · {t("smpInternal")}
+      </span>
+    );
+  }
+  return (
+    <span className="tile-smp" title={i.smp_ref}>
+      {shortSmp(i.smp_ref)}
+    </span>
+  );
+}
 
 export function IndicatorTile({
   indicator: i,
@@ -40,11 +61,7 @@ export function IndicatorTile({
       <article className="tile tile-gap" style={style} data-state={i.state}>
         <div className="tile-top">
           <CodeChip>{i.code}</CodeChip>
-          {i.smp_ref && (
-            <span className="tile-smp" title={i.smp_ref}>
-              {shortSmp(i.smp_ref)}
-            </span>
-          )}
+          <SmpChip indicator={i} />
           <FileQuestion className="tile-gap-icon" aria-hidden />
         </div>
         <h3 className="tile-name">
@@ -57,7 +74,9 @@ export function IndicatorTile({
             <div key={m.dataset} className="tile-gap-item">
               <span className="tile-gap-label">{t("missing")}</span>
               <strong>{pick(m.name, locale)}</strong>
-              <span className="tile-gap-owner">{t("owner", { owner: pick(m.owner, locale) })}</span>
+              <span className="tile-gap-owner" title={t("ownerPlaceholder")}>
+                {t("owner", { owner: pick(m.owner, locale) })}
+              </span>
             </div>
           ))}
         </div>
@@ -74,7 +93,8 @@ export function IndicatorTile({
 
   const unitLabel = pick(i.unit_label, locale);
   const value = formatIndicatorValue(i.value, i.unit, locale, unitLabel);
-  const delta = formatDelta(i.value, i.previous, i.unit, locale);
+  const delta = indicatorDelta(i, locale);
+  const deltaText = delta ? `${delta.text}${delta.points ? ` ${t("pp")}` : ""}` : null;
   const tone = statusTone(i.status);
   const targetText =
     i.target != null
@@ -87,11 +107,7 @@ export function IndicatorTile({
     <article className={`tile tile-proof ${fresh ? "is-fresh" : ""}`} style={style} data-status={i.status ?? "none"}>
       <div className="tile-top">
         <CodeChip>{i.code}</CodeChip>
-        {i.smp_ref && (
-            <span className="tile-smp" title={i.smp_ref}>
-              {shortSmp(i.smp_ref)}
-            </span>
-          )}
+        <SmpChip indicator={i} />
         {warnSignals.length > 0 && (
           <span className="tile-signal">
             <AlertTriangle aria-hidden />
@@ -120,7 +136,13 @@ export function IndicatorTile({
         {t(i.status ?? "no_target")}
         {targetText && <span className="tile-target"> · {targetText}</span>}
       </p>
-      {delta && <p className="tile-delta">{t("vsPrevious", { delta: delta.text })}</p>}
+      {delta && deltaText && (
+        <p className="tile-delta">
+          {delta.kind === "month" && delta.month
+            ? t("inMonth", { delta: deltaText, month: delta.month })
+            : t("vsPrevious", { delta: deltaText })}
+        </p>
+      )}
       <footer className="tile-foot">
         {synthetic && <SyntheticMark compact />}
         <span className="tile-period">{formatPeriod(i.period, locale, "short")}</span>

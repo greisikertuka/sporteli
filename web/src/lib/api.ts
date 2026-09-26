@@ -61,6 +61,10 @@ export type ColumnProfile = {
   null_pct: number;
   pii: null | "name" | "phone" | "email" | "personal_id" | "address";
   dropped: boolean;
+  /** Additive: how the column writes numbers ("sq" 1.234,5 · "en" 1,234.5 · null ambiguous). */
+  number_style?: "sq" | "en" | null;
+  /** Additive: each sample read as a number by the API (null when masked), for locale display. */
+  sample_values?: (number | null)[];
 };
 export type MappingSuggestion = {
   column: string;
@@ -83,7 +87,13 @@ export type IngestPreview = {
   data_rows: number;
   unit_multiplier: number;
   unit_note: L10n | null;
-  excluded_rows: { row_no: number; reason: "total_row" | "blank" | "title" | "subtotal"; text: string }[];
+  excluded_rows: {
+    row_no: number;
+    reason: "total_row" | "blank" | "title" | "subtotal";
+    text: string;
+    /** Additive: the row's cells (numbers as numbers, text masked) for locale display. */
+    cells?: (string | number | null)[];
+  }[];
   columns: ColumnProfile[];
   mapping: MappingSuggestion[];
   question: { column: string; text: L10n; options: { field: string | null; label: L10n }[] } | null;
@@ -129,6 +139,12 @@ export type LoadReceipt = {
     loaded_sum: number;
     ok: boolean;
     note: L10n | null;
+    /** Additive: amount carried by rows that were not loaded (invalid), in the field's unit. */
+    excluded_sum?: number;
+    /** Additive: rounding tolerance applied (half a unit of the file's precision). */
+    tolerance?: number;
+    /** Additive: some rows of this file were later replaced; the check no longer applies. */
+    stale?: boolean;
   }[];
   pii_dropped: string[];
   unit_multiplier: number;
@@ -149,7 +165,17 @@ export type LoadAudit = {
   header_row?: number;
   steps?: IngestStep[];
   column_errors?: { field: string; column: string; count: number; rows: string }[];
-  superseded?: { source_id: string; filename: string; rows: number; source_removed: boolean }[];
+  superseded?: {
+    source_id: string;
+    filename: string;
+    rows: number;
+    source_removed: boolean;
+    rows_remaining?: number;
+    key?: string[];
+  }[];
+  /** Rows of this file still stored after later loads replaced some of them. */
+  rows_current?: number;
+  superseded_by?: { source_id: string; rows: number }[];
   mapping?: { column: string; field: string | null }[];
 };
 
@@ -186,6 +212,13 @@ export type IndicatorSummary = {
   signals: Signal[];
   sources: { source_id: string; filename: string; synthetic: boolean }[];
   smp_ref: string | null;
+  /** Additive: "internal_view" = Sportel only approximates the SMP indicator (FIN-01 ≈ #47). */
+  smp_kind?: "direct" | "internal_view";
+  smp_note?: L10n | null;
+  /** Additive: "point" = a stock at the end of the month; "ytd" = from January. */
+  period_kind?: "ytd" | "point";
+  /** Additive: what a sparkline/series point means. */
+  series_kind?: "monthly" | "ytd_running";
   version: string;
   formula_status: "draft" | "from_source" | "validated";
   basis: string | null;

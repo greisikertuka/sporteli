@@ -277,6 +277,7 @@ function LeadershipCallout({
   onOpen: (code: string) => void;
 }) {
   const t = useTranslations("board.lead");
+  const tTile = useTranslations("tile");
   const locale = useLocale();
   return (
     <aside className="lead-callout" aria-labelledby="lead-title">
@@ -293,7 +294,7 @@ function LeadershipCallout({
             {lead.owed.map((o) => (
               <li key={o.ownerKey}>
                 <Link href={`/ingest?dataset=${encodeURIComponent(o.datasets[0]?.key ?? "")}`}>
-                  <strong>{pick(o.owner, locale)}</strong>
+                  <strong title={tTile("ownerPlaceholder")}>{pick(o.owner, locale)}</strong>
                   <span>
                     {t("owedDetail", {
                       datasets: o.datasets.map((d) => pick(d.name, locale)).join(", "),
@@ -381,6 +382,7 @@ function TrendAndSignals({ board, onOpen }: { board: IndicatorBoard; onOpen: (co
             unitLabel={pick(current.unit_label, locale)}
             target={current.target}
             name={pick(current.name, locale)}
+            seriesKind={current.series_kind}
           />
         ) : (
           <p className="fine-print">{t("trend.empty")}</p>

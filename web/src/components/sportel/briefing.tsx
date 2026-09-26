@@ -210,6 +210,7 @@ export function BriefingScreen() {
               )}
             </ul>
           )}
+          {lead.owed.length > 0 && <p className="fine-print">{t("ownersNote")}</p>}
         </section>
 
         {groups.map((g) => (

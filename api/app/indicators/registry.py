@@ -102,6 +102,12 @@ class Passport(BaseModel):
     period_kind: Literal["ytd", "point"] = "ytd"
     """``ytd``: the value covers 1 January to the end of the latest month; ``point``: a stock
     at the end of the latest month (e.g. open overdue requests, headcount)."""
+    series_kind: Literal["monthly", "ytd_running"] = "monthly"
+    """What a series point means: ``monthly`` = that month alone; ``ytd_running`` = the
+    year-to-date value at the end of that month (the last point equals the headline value)."""
+    smp_kind: Literal["direct", "internal_view"] = "direct"
+    """``internal_view``: Sportel only approximates the SMP indicator named in ``smp_ref``
+    (the official value is computed elsewhere, e.g. by AMVV)."""
 
     @property
     def uses_basis(self) -> bool:

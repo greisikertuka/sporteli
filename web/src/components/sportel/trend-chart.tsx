@@ -11,7 +11,7 @@ import { useTheme } from "next-themes";
 import { useId, useMemo, useState } from "react";
 
 import { useReducedMotion } from "@/hooks/use-api";
-import { formatIndicatorValue, formatNumber, formatPeriod, formatTarget, niceBounds, periodTick } from "@/lib/format";
+import { formatIndicatorValue, formatNumber, formatPeriod, formatTarget, monthLabel, niceBounds, periodTick } from "@/lib/format";
 
 echarts.use([LineChart, GridComponent, TooltipComponent, MarkLineComponent, SVGRenderer]);
 
@@ -67,7 +67,7 @@ function buildOption(a: {
     animationDurationUpdate: reduced ? 0 : 450,
     textStyle: { fontFamily: "var(--font-civic), system-ui, sans-serif" },
     // ECharts 6: the documented replacement for the deprecated `containLabel: true`.
-    grid: { left: 6, right: 56, top: 28, bottom: 6, outerBoundsMode: "same", outerBoundsContain: "axisLabel" },
+    grid: { left: 6, right: 104, top: 28, bottom: 6, outerBoundsMode: "same", outerBoundsContain: "axisLabel" },
     xAxis: {
       type: "category",
       data: series.map((p) => periodTick(p.period, locale)),
@@ -116,7 +116,14 @@ function buildOption(a: {
           color: c.ink,
           fontWeight: 600,
           fontSize: 12,
-          formatter: (p: { value: number | null }) => (p.value == null ? "" : fmt(p.value)),
+          // "80,7% · gusht": the month is always named so the end of a monthly series is never
+          // read as the tile's year-to-date value
+          formatter: (p: { value: number | null; dataIndex?: number }) => {
+            if (p.value == null) return "";
+            const at = series[p.dataIndex ?? series.length - 1]?.period;
+            const ym = at ? /^(\d{4})-(\d{2})/.exec(at) : null;
+            return ym ? `${fmt(p.value)} · ${monthLabel(Number(ym[2]), locale, "long")}` : fmt(p.value);
+          },
         },
         markLine:
           target != null
@@ -139,6 +146,7 @@ export function TrendChart({
   unitLabel,
   target,
   name,
+  seriesKind = "monthly",
   height = 260,
 }: {
   series: TrendSeries;
@@ -146,6 +154,8 @@ export function TrendChart({
   unitLabel: string;
   target: number | null;
   name: string;
+  /** What a point means: that month alone, or the running value from January (API `series_kind`). */
+  seriesKind?: "monthly" | "ytd_running";
   height?: number;
 }) {
   const t = useTranslations("board.trend");
@@ -167,7 +177,17 @@ export function TrendChart({
 
   return (
     <div className="trend-figure">
-      <div role="img" aria-label={t("summary", { name, period: rangeText })} className="trend-canvas" style={{ height }}>
+      <p className="trend-kind">{seriesKind === "ytd_running" ? t("kindYtd") : t("kindMonthly")}</p>
+      <div
+        role="img"
+        aria-label={t("summary", {
+          name,
+          period: rangeText,
+          kind: seriesKind === "ytd_running" ? t("kindWordYtd") : t("kindWordMonthly"),
+        })}
+        className="trend-canvas"
+        style={{ height }}
+      >
         <ReactEChartsCore
           echarts={echarts}
           option={option}

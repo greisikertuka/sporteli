@@ -20,14 +20,14 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { useApi } from "@/hooks/use-api";
+import { useApi, useReducedMotion } from "@/hooks/use-api";
 import { type AskAnswer, type AskEval, type AskExample, type AskLabel } from "@/lib/api";
 import { ask, getEval, getExamples, getPassport } from "@/lib/client";
 import { asLocale, formatCell, formatDateTime, formatIndicatorValue, formatMs, formatUsd, pick, summariseRanges } from "@/lib/format";
 import { ASK_LABEL_TONE, ASK_LABELS } from "@/lib/labels";
 
 import { useSystem } from "./system-context";
-import { CodeChip, ErrorState, PageHeader, SqlBlock, ToneChip } from "./ui";
+import { CodeChip, ErrorState, PageHeader, ReplayStamp, SqlBlock, ToneChip } from "./ui";
 
 const LABEL_ICON: Record<AskLabel, React.ComponentType<{ "aria-hidden"?: boolean }>> = {
   verified: SearchCheck,
@@ -69,6 +69,34 @@ export function AskScreen({ passport }: { passport: string | null }) {
   const counter = useRef(0);
   const autoAsked = useRef(false);
   const inputId = useId();
+  const reduced = useReducedMotion();
+  const answerRef = useRef<HTMLElement | null>(null);
+  const { board } = useSystem();
+  const newestId = history[0]?.id;
+
+  // A new answer lands below the example list: bring it into view and move focus to its
+  // heading (projector at 1280×720 and phones alike), without animating under reduced motion.
+  useEffect(() => {
+    if (newestId == null) return;
+    const el = answerRef.current;
+    if (!el) return;
+    el.querySelector<HTMLElement>("[data-answer-heading]")?.focus({ preventScroll: true });
+    // a hidden page does not animate smooth scrolling (it would never arrive): jump instead
+    const smooth = !reduced && document.visibilityState === "visible";
+    // land just below the sticky header, whose height changes with the width (pills wrap)
+    const header = document.querySelector(".civic-topbar");
+    const offset = (header ? header.getBoundingClientRect().bottom : 0) + 12;
+    window.scrollTo({ top: Math.max(0, window.scrollY + el.getBoundingClientRect().top - offset), behavior: smooth ? "smooth" : "auto" });
+  }, [newestId, reduced]);
+
+  /** The example's kind as it stands now: a gap example becomes "verified" once its export is
+   * loaded (and the other way round after a reset), read from the live board. */
+  const kindOf = (ex: AskExample): AskExample["kind"] => {
+    if (!ex.passport_code || (ex.kind !== "verified" && ex.kind !== "gap")) return ex.kind;
+    const indicator = board.data?.indicators.find((i) => i.code === ex.passport_code);
+    if (!indicator) return ex.kind;
+    return indicator.state === "computable" ? "verified" : "gap";
+  };
 
   const run = async (text: string, exampleId?: string) => {
     const q = text.trim();
@@ -156,23 +184,29 @@ export function AskScreen({ passport }: { passport: string | null }) {
               {examples.error ? <ErrorState error={examples.error} onRetry={examples.reload} /> : null}
               <ul className="example-chips">
                 {(examples.data ?? []).map((ex) => {
-                  const Icon = KIND_ICON[ex.kind];
+                  const kind = kindOf(ex);
+                  const Icon = KIND_ICON[kind];
                   const text = pick(ex.question, locale);
                   return (
                     <li key={ex.id}>
                       <button
                         type="button"
-                        className={`example-chip kind-${ex.kind}`}
+                        className={`example-chip kind-${kind}`}
                         disabled={busy}
                         onClick={() => {
                           setQuestion(text);
                           void run(text, ex.id);
                         }}
-                        aria-label={t("ask", { question: text })}
                       >
                         <Icon aria-hidden />
-                        <span className="example-text">{text}</span>
-                        <span className="example-kind">{t(`exampleKind.${ex.kind}`)}</span>
+                        <span className="example-text">
+                          <span className="sr-only">{t("askPrefix")} </span>
+                          {text}
+                        </span>
+                        <span className="example-kind">
+                          <span className="sr-only">· </span>
+                          {t(`exampleKind.${kind}`)}
+                        </span>
                       </button>
                     </li>
                   );
@@ -208,6 +242,7 @@ export function AskScreen({ passport }: { passport: string | null }) {
             {current && (
               <AnswerCard
                 key={current.id}
+                cardRef={answerRef}
                 answer={current.answer}
                 previous={earlier.find((e) => e.answer.question === current.answer.question)?.answer}
               />
@@ -276,7 +311,15 @@ function LegendItem({ label, evaluation }: { label: AskLabel; evaluation: AskEva
   );
 }
 
-function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: AskAnswer }) {
+function AnswerCard({
+  answer: a,
+  previous,
+  cardRef,
+}: {
+  answer: AskAnswer;
+  previous?: AskAnswer;
+  cardRef?: React.RefObject<HTMLElement | null>;
+}) {
   const t = useTranslations();
   const locale = useLocale();
   const { board } = useSystem();
@@ -288,11 +331,14 @@ function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: Ask
   const tone = ASK_LABEL_TONE[a.label];
 
   return (
-    <article className={`panel answer-card label-${a.label}`}>
+    <article ref={cardRef} className={`panel answer-card label-${a.label}`}>
+      <ReplayStamp />
       <header className="answer-head">
         <LabelStamp label={a.label} animate />
         <div className="answer-meaning">
-          <strong>{t(`labels.${a.label}.name`)}</strong>
+          <h2 className="answer-title" data-answer-heading tabIndex={-1}>
+            {t(`labels.${a.label}.name`)}
+          </h2>
           <p>{t(`labels.${a.label}.meaning`)}</p>
         </div>
       </header>
@@ -322,7 +368,7 @@ function AnswerCard({ answer: a, previous }: { answer: AskAnswer; previous?: Ask
           <div>
             <span className="gap-kicker">{t("ask.gapTitle")}</span>
             <strong>{pick(a.gap.name, locale)}</strong>
-            <span>
+            <span title={t("tile.ownerPlaceholder")}>
               {t("ask.gapOwner")}: {pick(a.gap.owner, locale)}
             </span>
             {a.gap.sample && <span className="gap-sample">{t("ask.gapSample", { name: a.gap.sample })}</span>}

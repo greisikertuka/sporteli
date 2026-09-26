@@ -429,6 +429,11 @@ def summary(e: Evaluated) -> dict:
         "signals": [s.api() for s in e.signals],
         "sources": list(e.sources),
         "smp_ref": p.smp_ref,
+        # additive: how to read the SMP chip, the period and the sparkline/series
+        "smp_kind": p.smp_kind,
+        "smp_note": dict(p.smp_note) if p.smp_note else None,
+        "period_kind": p.period_kind,
+        "series_kind": p.series_kind,
         "version": p.version,
         "formula_status": p.formula_status,
         "basis": e.basis,

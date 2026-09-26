@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 import {
   formatBytes,
   formatDelta,
+  formatRowCells,
+  indicatorDelta,
+  lastMonthOf,
   formatIndicatorValue,
   formatMs,
   formatNumber,
@@ -450,4 +453,32 @@ test("result-table cells keep their precision in the locale's number format", as
   assert.equal(formatCell(61, "en"), "61");
   assert.equal(formatCell("Drejtoria e Punëve Publike", "sq"), "Drejtoria e Punëve Publike");
   assert.equal(formatCell(null, "sq"), "–");
+});
+
+test("tile deltas: a running total names its month; percentages are in points", () => {
+  assert.equal(lastMonthOf("2026-01/2026-08"), "2026-08");
+  assert.equal(lastMonthOf("2026-08"), "2026-08");
+  assert.equal(lastMonthOf(null), null);
+  const req01 = indicatorDelta({ value: 2400, previous: 2063, unit: "count", period: "2026-01/2026-08", period_kind: "ytd" }, "sq");
+  assert.deepEqual(req01, { text: "+337", kind: "month", points: false, month: "gusht 2026" });
+  const req02 = indicatorDelta({ value: 88.47, previous: 89.8, unit: "percent", period: "2026-01/2026-08", period_kind: "ytd" }, "sq");
+  assert.equal(req02.kind, "change");
+  assert.equal(req02.points, true);
+  assert.equal(req02.text, "−1,3");
+  // a stock compares with the month before, even for counts
+  const req03 = indicatorDelta({ value: 40, previous: 35, unit: "count", period: "2026-08", period_kind: "point" }, "en");
+  assert.equal(req03.kind, "change");
+  assert.equal(indicatorDelta({ value: 1, previous: null, unit: "count", period: "2026-08" }, "en"), null);
+});
+
+test("set-aside rows are shown in the locale's number format", () => {
+  assert.equal(formatRowCells(["Gjithsej", null, null, 594389.9, 466980.6], "sq"), "Gjithsej · 594.389,9 · 466.980,6");
+  assert.equal(formatRowCells(["TOTALI", null, 26828.9, 4818], "en"), "TOTALI · 26,828.9 · 4,818");
+  assert.equal(formatRowCells(["Title", "Title", "Title"], "sq"), "Title");
+});
+
+test("a REPLAY receipt keeps its recorded time instead of now", async () => {
+  replay.__resetReplayForTests();
+  const { receipt } = await load(ZARFI_2);
+  assert.equal(receipt.loaded_at, SNAPSHOT.receipts[ZARFI_2].loaded_at);
 });

@@ -27,6 +27,12 @@ import duckdb
 from app.sqlguard.guard import ALLOWED_TABLES, MAX_ROWS
 
 DEFAULT_TIMEOUT_S = 3.0
+MAX_CELL_CHARS = 500
+"""Longest string cell returned; longer values are cut and end with an ellipsis."""
+MAX_RESULT_BYTES = 1_000_000
+"""Approximate size budget of a result (JSON characters); rows past it are dropped and the
+result is marked truncated. ``memory_limit`` does not bound what DuckDB hands to Python."""
+_FETCH_BATCH = 16
 
 _LOCKDOWN = (
     "SET enable_external_access = false",
@@ -52,7 +58,7 @@ class SandboxResult:
     columns: list[str]
     rows: list[list[str | int | float | bool | None]]
     truncated: bool
-    """True when the result hit the row cap."""
+    """True when the result hit the row cap or the size budget."""
     elapsed_ms: int
 
 
@@ -88,19 +94,32 @@ def open_sandbox(
     return sandbox
 
 
+def _cut(text: str) -> str:
+    return text if len(text) <= MAX_CELL_CHARS else text[: MAX_CELL_CHARS - 1] + "…"
+
+
 def _jsonable(value: object) -> str | int | float | None:
-    """JSON cell value: numbers stay numbers; dates, booleans and the rest become strings."""
+    """JSON cell value: numbers stay numbers; dates, booleans and the rest become strings
+    (strings longer than ``MAX_CELL_CHARS`` are cut)."""
     if isinstance(value, bool):
         return "true" if value else "false"
-    if value is None or isinstance(value, int | str):
+    if value is None or isinstance(value, int):
         return value
+    if isinstance(value, str):
+        return _cut(value)
     if isinstance(value, float):
         return None if math.isnan(value) or math.isinf(value) else round(value, 6)
     if isinstance(value, decimal.Decimal):
         return float(value)
     if isinstance(value, dt.datetime | dt.date | dt.time):
         return value.isoformat()
-    return str(value)
+    if isinstance(value, bytes | bytearray | memoryview):
+        return _cut(bytes(value[:MAX_CELL_CHARS]).hex())
+    return _cut(str(value)[: MAX_CELL_CHARS + 1])
+
+
+def _cell_size(value: str | int | float | None) -> int:
+    return len(value) + 4 if isinstance(value, str) else 12
 
 
 def run_sandboxed(
@@ -128,7 +147,23 @@ def run_sandboxed(
         try:
             cursor = sandbox.execute(sql)
             columns = [d[0] for d in (cursor.description or [])]
-            raw = cursor.fetchmany(max_rows + 1)
+            rows: list[list] = []
+            size = sum(len(c) + 4 for c in columns)
+            truncated = False
+            while not truncated:
+                batch = cursor.fetchmany(_FETCH_BATCH)
+                if not batch:
+                    break
+                for raw in batch:
+                    if len(rows) >= max_rows:
+                        truncated = True
+                        break
+                    row = [_jsonable(v) for v in raw]
+                    size += sum(_cell_size(v) for v in row)
+                    if size > MAX_RESULT_BYTES and rows:
+                        truncated = True
+                        break
+                    rows.append(row)
         except duckdb.Error as exc:
             if timed_out.is_set() or isinstance(exc, duckdb.InterruptException):
                 raise SandboxTimeout(f"query interrupted after {timeout_s:g} s") from exc
@@ -136,8 +171,6 @@ def run_sandboxed(
     finally:
         timer.cancel()
         sandbox.close()
-    truncated = len(raw) > max_rows
-    rows = [[_jsonable(v) for v in r] for r in raw[:max_rows]]
     return SandboxResult(
         columns=columns,
         rows=rows,

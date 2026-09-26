@@ -1,12 +1,15 @@
 "use client";
 
-import { ArrowRight, Check, MessageSquareText, X } from "lucide-react";
+import { ArrowRight, Check, MessageSquareText, RefreshCw, X } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 
 import type { LoadReceipt as Receipt } from "@/lib/api";
 import { formatDateTime, formatLek, formatMs, formatNumber, formatUsd, pick } from "@/lib/format";
 import { receiptBalance, reconciliationOk } from "@/lib/labels";
+
+import { useSystem } from "./system-context";
+import { ReplayStamp } from "./ui";
 
 /** Deterministic "barcode" drawn from the file hash: decoration, the hash itself is printed below. */
 function HashBars({ hash }: { hash: string }) {
@@ -66,6 +69,8 @@ export function LoadReceipt({
   const n = (v: number) => formatNumber(v, locale);
   const balance = receiptBalance(r);
   const recOk = reconciliationOk(r) && balance.balanced;
+  // In REPLAY the receipt is a recording: its time is when it was recorded, never "now".
+  const { replay } = useSystem();
 
   return (
     <div className={`receipt-wrap ${animate ? "is-printing" : ""} ${compact ? "compact" : ""}`}>
@@ -75,13 +80,13 @@ export function LoadReceipt({
           <h3>{t("title")}</h3>
           <p className="receipt-sub">{pick(r.dataset_name, locale)}</p>
           {r.synthetic && <p className="receipt-synthetic">{t("synthetic")}</p>}
+          <ReplayStamp />
         </header>
 
         <div className="receipt-section">
           <Line label={t("source")} value={<span className="receipt-file">{r.filename}</span>} />
-          <Line label={t("dataset")} value={r.dataset} />
           <Line label={t("hash")} value={`${r.file_hash.slice(0, 16)}…`} />
-          <Line label={t("loadedAt")} value={formatDateTime(r.loaded_at, locale)} />
+          <Line label={replay.replay ? t("recordedAt") : t("loadedAt")} value={formatDateTime(r.loaded_at, locale)} />
           <Line label={t("duration")} value={formatMs(r.duration_ms, locale)} />
         </div>
 
@@ -97,6 +102,9 @@ export function LoadReceipt({
             {t("balance")} · {n(balance.read)} = {n(balance.loaded)} + {n(balance.excluded)}
             <span className="sr-only">{balance.balanced ? t("ok") : t("fail")}</span>
           </p>
+          {r.rows_current != null && r.rows_current !== r.rows_loaded && (
+            <Line label={t("rowsCurrent")} value={n(r.rows_current)} />
+          )}
         </div>
 
         {r.reconciliation.length > 0 && (
@@ -107,12 +115,19 @@ export function LoadReceipt({
               return (
                 <div key={rec.field} className="receipt-rec">
                   <p className="receipt-rec-name">
-                    {rec.ok ? <Check aria-hidden className="ok" /> : <X aria-hidden className="fail" />}
+                    {rec.stale ? (
+                      <RefreshCw aria-hidden className="stale" />
+                    ) : rec.ok ? (
+                      <Check aria-hidden className="ok" />
+                    ) : (
+                      <X aria-hidden className="fail" />
+                    )}
                     {pick(rec.label, locale)}
-                    <span className="sr-only">{rec.ok ? t("ok") : t("fail")}</span>
+                    <span className="sr-only">{rec.stale ? t("stale") : rec.ok ? t("ok") : t("fail")}</span>
                   </p>
                   <Line label={t("fileTotal")} value={rec.file_total == null ? t("noFileTotal") : fmt(rec.file_total)} indent={1} />
                   <Line label={t("loadedSum")} value={fmt(rec.loaded_sum)} indent={1} />
+                  {rec.excluded_sum ? <Line label={t("excludedSum")} value={fmt(rec.excluded_sum)} indent={1} /> : null}
                   {rec.note && <p className="receipt-note">{pick(rec.note, locale)}</p>}
                 </div>
               );

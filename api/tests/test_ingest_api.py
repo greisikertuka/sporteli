@@ -90,7 +90,18 @@ def test_gap_to_proof_loop_over_http(client):
     assert set(preview) == PREVIEW_KEYS
     assert preview["dataset"]["key"] == "revenue"
     col = preview["columns"][0]
-    assert set(col) == {"index", "name", "inferred_type", "samples", "null_pct", "pii", "dropped"}
+    assert set(col) == {
+        "index",
+        "name",
+        "inferred_type",
+        "samples",
+        "null_pct",
+        "pii",
+        "dropped",
+        # additive: number style and code-read sample numbers for locale display
+        "number_style",
+        "sample_values",
+    }
     m = preview["mapping"][0]
     assert set(m) == {"column", "field", "confidence", "reason", "transform", "source"}
     assert set(preview["recipe"]) == {"hit", "recipe_id", "fingerprint", "drift"}

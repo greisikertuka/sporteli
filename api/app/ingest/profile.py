@@ -11,7 +11,7 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 
-from app.catalog import parse_date, parse_month, parse_number
+from app.catalog import number_style, parse_date, parse_month, parse_number
 from app.ingest.layout import cell_text, is_numeric_text
 from app.ingest.pii import PII_LABELS, PiiFinding, mask_sample
 from app.ingest.reader import Cell
@@ -37,6 +37,12 @@ class ColumnProfile:
     dropped: bool
     formats: set[str] = field(default_factory=set)
     """Formats recognised in the values: dmy, month_name, iso_month, decimal_comma, excel_date."""
+    number_style: str | None = None
+    """``sq`` / ``en`` / None: how the column writes numbers, decided once for all its values
+    (see ``catalog.number_style``), so every value is read at the same scale."""
+    sample_values: list[float | None] = field(default_factory=list)
+    """For number columns: each sample read as a number by code (None when it is masked or not
+    a number), so the client can show it in its own locale. Never sent to the model."""
 
     def api(self) -> dict:
         return {
@@ -47,10 +53,13 @@ class ColumnProfile:
             "null_pct": self.null_pct,
             "pii": self.pii,
             "dropped": self.dropped,
+            # additive
+            "number_style": self.number_style,
+            "sample_values": list(self.sample_values),
         }
 
 
-def classify(value: Cell) -> tuple[str, str | None]:
+def classify(value: Cell, style: str | None = None) -> tuple[str, str | None]:
     """``(kind, format)`` for one non-empty cell: kind is date/int/float/string."""
     if isinstance(value, bool):
         return "string", None
@@ -83,7 +92,7 @@ def classify(value: Cell) -> tuple[str, str | None]:
         if _LEADING_ZERO_RE.match(text):
             return "string", "code"
         try:
-            num = parse_number(text)
+            num = parse_number(text, style)
         except ValueError:
             num = None
         if num is not None:
@@ -98,14 +107,14 @@ def classify(value: Cell) -> tuple[str, str | None]:
     return "string", None
 
 
-def infer_type(values: list[Cell]) -> tuple[str, set[str]]:
+def infer_type(values: list[Cell], style: str | None = None) -> tuple[str, set[str]]:
     filled = [v for v in values if v is not None][:TYPE_SAMPLE]
     if not filled:
         return "empty", set()
     kinds: dict[str, int] = {}
     formats: set[str] = set()
     for v in filled:
-        kind, fmt = classify(v)
+        kind, fmt = classify(v, style)
         kinds[kind] = kinds.get(kind, 0) + 1
         if fmt:
             formats.add(fmt)
@@ -128,8 +137,11 @@ def profile_column(
     total = len(values)
     nulls = sum(v is None for v in values)
     null_pct = round(100.0 * nulls / total, 1) if total else 100.0
-    inferred, formats = infer_type(values)
+    style = number_style(values) if finding is None else None
+    inferred, formats = infer_type(values, style)
     samples: list[str] = []
+    sample_values: list[float | None] = []
+    numeric = inferred in ("int", "float")
     if finding is None:
         seen: set[str] = set()
         for v in values:
@@ -139,6 +151,8 @@ def profile_column(
             if s and s not in seen:
                 seen.add(s)
                 samples.append(s)
+                if numeric:
+                    sample_values.append(_sample_number(v, s, style))
                 if len(samples) >= MAX_SAMPLES:
                     break
     return ColumnProfile(
@@ -150,7 +164,19 @@ def profile_column(
         pii=finding.kind if finding else None,
         dropped=finding is not None,
         formats=formats if finding is None else set(),
+        number_style=style if numeric else None,
+        sample_values=sample_values,
     )
+
+
+def _sample_number(value: Cell, sample: str, style: str | None) -> float | None:
+    if "•" in sample or "[" in sample:  # masked: keep the mask on screen too
+        return None
+    try:
+        num = parse_number(value, style)
+    except (ValueError, TypeError):
+        return None
+    return None if num is None else round(num, 6)
 
 
 def pii_label(kind: str, locale: str) -> str:

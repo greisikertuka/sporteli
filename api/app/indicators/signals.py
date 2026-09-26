@@ -108,6 +108,9 @@ class Reconciliation:
     file_total: float | None
     loaded_sum: float | None
     ok: bool
+    stale: bool = False
+    """Some rows of the file were later replaced by another load: the check no longer
+    describes the stored rows, so it is neither evidence nor a warning."""
 
 
 # --------------------------------------------------------------------------------------------
@@ -421,7 +424,7 @@ def off_target_signal(p: Passport, value: float | None, period: str | None) -> l
 def parts_vs_total_signals(recons: Iterable[Reconciliation]) -> list[Signal]:
     out = []
     for r in recons:
-        if r.ok or r.file_total is None:
+        if r.ok or r.stale or r.file_total is None:
             continue
         msg: dict[str, str] = {}
         for loc in LOCALES:
@@ -500,7 +503,8 @@ def parse_reconciliation(filename: str, raw: object) -> list[Reconciliation]:
                 or loaded is None
                 or abs(file_total - loaded) <= max(0.5, abs(file_total) * 1e-4)
             )
-        out.append(Reconciliation(filename, fld, label, file_total, loaded, ok))
+        stale = item.get("stale") is True
+        out.append(Reconciliation(filename, fld, label, file_total, loaded, ok, stale))
     return out
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from app.catalog import normalize_text, strip_diacritics, unit_multiplier_from_text
@@ -86,9 +87,49 @@ class ExcludedRow:
     """``title`` | ``blank`` | ``total_row`` | ``subtotal``."""
     text: str
     cells: list[Cell]
+    display: list[str | int | float | None] | None = None
+    """Cells for display (see ``display_cells``); set by the pipeline after the PII gate."""
 
     def api(self) -> dict:
-        return {"row_no": self.row_no, "reason": self.reason, "text": self.text}
+        return {
+            "row_no": self.row_no,
+            "reason": self.reason,
+            "text": self.text,
+            # additive: the cells for display, numbers as numbers so the client formats them in
+            # its locale (text is masked; personal columns are already empty)
+            "cells": self.display if self.display is not None else display_cells(self.cells),
+        }
+
+
+def display_cells(
+    row: list[Cell],
+    number_at: Callable[[int, str], float | None] | None = None,
+    limit: int = 40,
+) -> list[str | int | float | None]:
+    """JSON-safe cells of a set-aside row: numbers stay numbers, dates become ISO text, text is
+    masked (e-mails, personal IDs, phones); trailing empty cells are dropped. ``number_at``
+    reads a text cell of a number column as a number (the column's own number style)."""
+    from app.ingest.pii import mask_personal
+
+    out: list[str | int | float | None] = []
+    for j, v in enumerate(row[:limit]):
+        if isinstance(v, str) and number_at is not None:
+            num = number_at(j, v)
+            if num is not None:
+                out.append(round(num, 6))
+                continue
+        if v is None or isinstance(v, bool):
+            out.append(None if v is None else str(v))
+        elif isinstance(v, int):
+            out.append(v)
+        elif isinstance(v, float):
+            out.append(None if math.isnan(v) or math.isinf(v) else round(v, 6))
+        else:
+            text = cell_text(v)
+            out.append(mask_personal(text)[:160] if text else None)
+    while out and out[-1] is None:
+        out.pop()
+    return out
 
 
 @dataclass

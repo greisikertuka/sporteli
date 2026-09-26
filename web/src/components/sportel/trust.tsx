@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useApi } from "@/hooks/use-api";
 import { ApiError, type AskLabel, type LlmCall } from "@/lib/api";
-import { getEval, getLlmCalls } from "@/lib/client";
+import { getCoverage, getEval, getLlmCalls } from "@/lib/client";
 import { clampPct, formatDateTime, formatMs, formatNumber, formatUsd } from "@/lib/format";
 import { ASK_LABEL_TONE, ASK_LABELS } from "@/lib/labels";
 
@@ -30,6 +30,8 @@ export function TrustScreen() {
   const { health } = useSystem();
   const calls = useApi("llm:calls", getLlmCalls);
   const evaluation = useApi("ask:eval", getEval);
+  // The counts in the limits come from the API, never from the copy.
+  const coverage = useApi("coverage:al_smp", () => getCoverage("al_smp"));
   const mode = calls.data?.mode ?? health.data?.mode ?? "rules";
   const spent = calls.data?.spent_usd ?? health.data?.spent_usd ?? 0;
   const budget = calls.data?.budget_usd ?? health.data?.budget_usd ?? 0;
@@ -184,9 +186,18 @@ export function TrustScreen() {
 
       <Section title={t("limitsTitle")}>
         <ol className="limits-list">
-          {limits.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
+          {limits.map((item) => {
+            let text = item;
+            if (item === "$coverage") {
+              const counts = coverage.data?.counts;
+              text = counts
+                ? t("limitsDynamic.coverage", { document: counts.document ?? 0, manual: counts.manual ?? 0 })
+                : t("limitsDynamic.coverageLoading");
+            } else if (item === "$eval") {
+              text = evalTotal > 0 ? t("limitsDynamic.eval", { total: evalTotal }) : t("limitsDynamic.evalLoading");
+            }
+            return <li key={item}>{text}</li>;
+          })}
         </ol>
       </Section>
     </>

@@ -1,12 +1,14 @@
 "use client";
 
-import { AlertTriangle, Check, Copy, FlaskConical, RotateCw } from "lucide-react";
+import { AlertTriangle, Check, Copy, FlaskConical, History, RotateCw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { pick } from "@/lib/format";
 import type { Tone } from "@/lib/labels";
+
+import { useSystem } from "./system-context";
 
 // ---------------------------------------------------------------- page header
 
@@ -66,6 +68,23 @@ export function SyntheticMark({ compact = false }: { compact?: boolean }) {
       <FlaskConical aria-hidden />
       {t("synthetic")}
     </span>
+  );
+}
+
+/**
+ * Visible on every screen part that shows an API answer while the app runs in REPLAY: the
+ * content is a recorded API response over the synthetic files, not a live computation.
+ */
+export function ReplayStamp({ className = "" }: { className?: string }) {
+  const t = useTranslations("header");
+  const { replay } = useSystem();
+  if (!replay.replay) return null;
+  return (
+    <p className={`replay-stamp ${className}`} role="note">
+      <History aria-hidden />
+      <span className="replay-stamp-tag">{t("replay")}</span>
+      <span>{t("replayStamp")}</span>
+    </p>
   );
 }
 

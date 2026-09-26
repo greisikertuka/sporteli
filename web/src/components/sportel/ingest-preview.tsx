@@ -20,10 +20,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useReducedMotion } from "@/hooks/use-api";
 import type { DatasetInfo, IngestPreview, IngestStep, MappingSuggestion } from "@/lib/api";
-import { formatBytes, formatMs, formatNumber, formatUsd, pick } from "@/lib/format";
+import { formatBytes, formatCell, formatMs, formatNumber, formatRowCells, formatUsd, pick } from "@/lib/format";
 import { confidenceTier, needsConfirmation, pendingConfirmations } from "@/lib/labels";
 
-import { CodeChip, SyntheticMark, ToneChip } from "./ui";
+import { CodeChip, ReplayStamp, SyntheticMark, ToneChip } from "./ui";
 
 const STEP_MS = 280;
 
@@ -151,6 +151,7 @@ export function PreviewDetails({
 
   return (
     <div className="preview-details">
+      <ReplayStamp />
       <div className="preview-meta">
         <div className="preview-file">
           <CodeChip>{preview.filename}</CodeChip>
@@ -228,7 +229,7 @@ export function PreviewDetails({
                   <li key={e.row_no}>
                     <span className="excluded-row">{t("row", { n: e.row_no })}</span>
                     <span className={`excluded-reason ${e.reason}`}>{t(`excludedReason.${e.reason}`)}</span>
-                    <span className="excluded-text">{e.text}</span>
+                    <span className="excluded-text">{e.cells ? formatRowCells(e.cells, locale) : e.text}</span>
                   </li>
                 ))}
               </ul>
@@ -360,9 +361,11 @@ export function PreviewDetails({
                     <span className="map-col">{r.column}</span>
                     {profile && profile.samples.length > 0 && (
                       <span className="map-samples" aria-label={t("colSamples")}>
-                        {profile.samples.slice(0, 3).map((s, i) => (
-                          <code key={i}>{s || "∅"}</code>
-                        ))}
+                        {profile.samples.slice(0, 3).map((s, i) => {
+                          // numbers read by the API, shown in the page's locale (masked ones stay masked)
+                          const v = profile.sample_values?.[i];
+                          return <code key={i}>{v != null ? formatCell(v, locale) : s || "∅"}</code>;
+                        })}
                       </span>
                     )}
                     <span className="map-reason">{pick(r.suggestion.reason, locale)}</span>

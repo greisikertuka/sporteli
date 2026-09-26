@@ -5,6 +5,8 @@ number in the original file/sheet) so any number can be traced back to its sourc
 JSON payloads are stored as VARCHAR (no extension needed).
 """
 
+import re
+
 import duckdb
 
 FACT_DDL: dict[str, str] = {
@@ -153,11 +155,50 @@ def init_schema(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def reset_schema(con: duckdb.DuckDBPyConnection, *, keep: tuple[str, ...] = KEEP_ON_RESET) -> None:
-    """Drop and recreate all tables except those in ``keep`` (default: the LLM call log)."""
+    """Drop and recreate all tables except those in ``keep`` (default: the LLM call log).
+
+    Not safe while other cursors read: use ``ensure_schema`` + ``clear_tables`` inside one
+    transaction for a live reset."""
     for table in ALL_TABLES:
         if table not in keep:
             con.execute(f"DROP TABLE IF EXISTS {table}")
     init_schema(con)
+
+
+_COLUMN_RE = re.compile(r"^\s+(\w+)\s+[A-Z]", re.MULTILINE)
+
+
+def ddl_columns(table: str) -> list[str]:
+    """Column names declared for ``table`` in its DDL, in order."""
+    ddl = (FACT_DDL | SYSTEM_DDL)[table]
+    return _COLUMN_RE.findall(ddl.split("(", 1)[1])
+
+
+def ensure_schema(con: duckdb.DuckDBPyConnection) -> list[str]:
+    """Create missing tables and recreate any table whose columns differ from its DDL (a
+    warehouse file from an older build). Returns the recreated tables. Run outside readers'
+    hot path: recreating a table is a catalog change."""
+    init_schema(con)
+    recreated = []
+    for table in ALL_TABLES:
+        if table in KEEP_ON_RESET:
+            continue
+        have = table_columns(con, table)
+        want = ddl_columns(table)
+        if have != want and not (table == "source" and have == want[:-1]):
+            con.execute(f"DROP TABLE IF EXISTS {table}")
+            recreated.append(table)
+    if recreated:
+        init_schema(con)
+    return recreated
+
+
+def clear_tables(con: duckdb.DuckDBPyConnection, *, keep: tuple[str, ...] = KEEP_ON_RESET) -> None:
+    """Delete every row of every table except those in ``keep`` (tables stay in place, so a
+    reset can run inside one transaction while other cursors keep reading)."""
+    for table in ALL_TABLES:
+        if table not in keep:
+            con.execute(f"DELETE FROM {table}")
 
 
 def table_columns(con: duckdb.DuckDBPyConnection, table: str) -> list[str]:

@@ -282,6 +282,12 @@ def _reconciliation_text(m: SourceMeta, loc: str) -> str:
     items = [r for r in items if r.file_total is not None]
     if not items:
         return "—"
+    if any(r.stale for r in items):
+        return (
+            "↻ pjesërisht e zëvendësuar nga një ngarkim i mëvonshëm"
+            if loc == "sq"
+            else "↻ partly replaced by a later load"
+        )
     bad = [r for r in items if not r.ok]
     if not bad:
         labels = ", ".join(r.label.get(loc) or r.field for r in items)
@@ -399,6 +405,10 @@ def _notes_sheet(
     synthetic = any(m.synthetic for m in meta.values())
     period = reg.format_period(as_of(evaluated), loc) if as_of(evaluated) else "—"
     basis_label = POPULATION_BASES[basis][loc]
+    # the stock (point-in-time) indicators come from the registry, never a hand-kept list
+    stock = ", ".join(
+        dict.fromkeys(e.passport.code for e in evaluated if e.passport.period_kind == "point")
+    )
     if loc == "sq":
         lines = [
             ("Sportel — Raporto një herë, provo çdo numër", "title"),
@@ -439,8 +449,10 @@ def _notes_sheet(
                 None,
             ),
             (
-                "Vlerat janë nga 1 janari deri në fund të muajit të fundit me të dhëna, përveç "
-                "treguesve të gjendjes (REQ-03, HR-01, HR-02).",
+                "Vlerat janë nga 1 janari deri në fund të muajit të fundit me të dhëna"
+                + (
+                    f", përveç treguesve të gjendjes në fund të muajit ({stock})." if stock else "."
+                ),
                 None,
             ),
             (
@@ -493,8 +505,12 @@ def _notes_sheet(
             ),
             (f"Per-resident indicators use the population basis: {basis_label}.", None),
             (
-                "Values run from 1 January to the end of the latest month with data, except "
-                "stock indicators (REQ-03, HR-01, HR-02).",
+                "Values run from 1 January to the end of the latest month with data"
+                + (
+                    f", except stock indicators at the end of the month ({stock})."
+                    if stock
+                    else "."
+                ),
                 None,
             ),
             ("Owners are placeholder roles; names are confirmed with the municipality.", None),
