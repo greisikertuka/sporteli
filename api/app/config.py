@@ -42,6 +42,9 @@ class Settings(BaseSettings):
         "http://localhost:3100",
     ]
     llm_budget_usd: float = 20.0
+    llm_send_samples: bool = False
+    """False (default): column mapping sends headers and inferred types only, never cell values.
+    True: also send up to 5 masked sample values per non-personal column (better confidence)."""
     demo_reset_enabled: bool = True
     samples_dir: str = "samples"
 

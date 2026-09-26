@@ -19,6 +19,7 @@ def _no_real_llm_keys(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.delenv("AI_API_KEY", raising=False)
     monkeypatch.setenv("LLM_PROVIDER", "auto")
+    monkeypatch.delenv("LLM_SEND_SAMPLES", raising=False)
 
 
 @pytest.fixture

@@ -729,17 +729,26 @@ def _map_phase(state: PreviewState, con: Cursor, dataset: str | None) -> None:
             state.llm = _llm_summary(ai.result, ai.sent)
             res = ai.result
             n_ai = sum(1 for s in state.suggestions if s.source == "ai" and s.field)
+            heads, per_col = ai.sent["headers"], ai.sent["samples_per_column"]
+            sent_sq = (
+                f"U dërguan vetëm {heads} koka dhe ≤{per_col} shembuj të maskuar për kolonë"
+                if per_col
+                else f"U dërguan vetëm {heads} koka kolonash, asnjë vlerë qelize"
+            )
+            sent_en = (
+                f"Only {heads} headers and ≤{per_col} masked samples per column were sent"
+                if per_col
+                else f"Only {heads} column headers were sent, no cell values"
+            )
             log.add(
                 "mapping",
                 "ok",
                 f"{res.model or 'AI'} propozoi hartëzimin ({n_ai} kolona) në "
                 f"{_n((res.latency_ms or 0) / 1000, 'sq', 1)} s · ${_n(res.cost_usd, 'sq', 4)}. "
-                f"U dërguan vetëm {ai.sent['headers']} koka dhe ≤{ai.sent['samples_per_column']} "
-                "shembuj të maskuar për kolonë — 0 rreshta.",
+                f"{sent_sq} — 0 rreshta.",
                 f"{res.model or 'AI'} proposed the mapping ({n_ai} columns) in "
                 f"{_n((res.latency_ms or 0) / 1000, 'en', 1)} s · ${_n(res.cost_usd, 'en', 4)}. "
-                f"Only {ai.sent['headers']} headers and ≤{ai.sent['samples_per_column']} masked "
-                "samples per column were sent — 0 rows.",
+                f"{sent_en} — 0 rows.",
             )
         else:
             state.suggestions = rules

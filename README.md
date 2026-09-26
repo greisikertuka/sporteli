@@ -236,7 +236,7 @@ code. If a model-written "interpreted as" text contains a digit, code replaces i
 
 | Call | Sent | Never sent |
 |---|---|---|
-| Mapping | Column headers, inferred types, at most 5 masked sample values per non-personal column | Rows (`rows_sent: 0`), personal columns |
+| Mapping | Column headers and inferred types; masked sample values only if `LLM_SEND_SAMPLES=true` (off by default) | Rows (`rows_sent: 0`), personal columns |
 | Question intent | The question text (up to 1,000 characters), the list of passports, the schema of the allowed tables | Any data row |
 
 - **Personal-data gate.** Columns that hold names, phone numbers, e-mail addresses, Albanian

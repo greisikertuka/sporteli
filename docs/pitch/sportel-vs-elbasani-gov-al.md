@@ -23,8 +23,11 @@ Sportel is not a second chatbot. It is the back office that the chatbot, the Per
 | **When data is missing** | Can only answer what the report contains | Says "Pa përgjigje" (no answer), names the missing export and the directorate that owns it, and guesses no number |
 | **Who produces the numbers** | People compile the report by hand; the AI reads it | Code computes every number; the AI only suggests which column is which |
 | **Combining departments** | Not possible | Joins department exports, e.g. how much of the waste cost the cleaning fee covers (revenue + budget) |
-| **Link to the national performance system (SMP)** | No | Maps the 52 official SMP indicators: which are computed, which are document checks, which AMVV computes nationally, and who owns the missing ones |
+| **Link to the national performance system (SMP)** | No | **Today:** a draft map of the 52 SMP indicators (pending organiser approval), and 5 Sportel indicators already match SMP definitions. **Future plan:** compute every SMP indicator that municipal exports can support |
 | **Output** | Chat answers | Dashboard, reports, an Excel file with a source column, an open-data CSV and an API |
+| **Who can see what** | Public | **Future plan:** logins and roles per directorate. The prototype has no login, so it runs only on synthetic data |
+| **Feeding the city's AI window** | n/a | **Future plan:** the read-only indicator API exists today; agreeing the feed format with the window's team is a pilot step |
+| **Where the AI runs** | Not published | **Today:** the AI sees column names and the question only, never values or rows. **Future plan:** a local open model on the municipal server, or an EU-region provider with zero data retention |
 
 ## The WOW factors
 

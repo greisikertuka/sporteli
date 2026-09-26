@@ -22,6 +22,7 @@ from functools import lru_cache
 from rapidfuzz import fuzz
 
 from app.catalog import DATASETS, Dataset, Field, get_dataset, header_key, normalize_text, t
+from app.config import get_settings
 from app.ingest.profile import ColumnProfile
 from app.llm.client import MODEL_FAST, LLMResult, get_llm
 
@@ -343,6 +344,8 @@ and options to [].
 def mapping_prompt(ds: Dataset, columns: list[ColumnProfile]) -> tuple[str, dict]:
     """The user prompt (JSON) and the ``sent`` summary for the call log."""
     usable = [c for c in columns if not c.dropped]
+    # Cell values stay on the server unless LLM_SEND_SAMPLES is switched on explicitly.
+    n_samples = 5 if get_settings().llm_send_samples else 0
     payload = {
         "dataset": {"key": ds.key, "name_sq": ds.name["sq"], "name_en": ds.name["en"]},
         "fields": [
@@ -357,7 +360,7 @@ def mapping_prompt(ds: Dataset, columns: list[ColumnProfile]) -> tuple[str, dict
             for f in ds.fields
         ],
         "columns": [
-            {"name": c.name, "inferred_type": c.inferred_type, "samples": c.samples[:5]}
+            {"name": c.name, "inferred_type": c.inferred_type, "samples": c.samples[:n_samples]}
             for c in usable
         ],
     }
@@ -367,7 +370,7 @@ def mapping_prompt(ds: Dataset, columns: list[ColumnProfile]) -> tuple[str, dict
     sent = {
         "dataset": ds.key,
         "headers": len(usable),
-        "samples_per_column": max((len(c.samples[:5]) for c in usable), default=0),
+        "samples_per_column": max((len(c.samples[:n_samples]) for c in usable), default=0),
         "pii_columns_withheld": sum(1 for c in columns if c.dropped),
     }
     return prompt, sent

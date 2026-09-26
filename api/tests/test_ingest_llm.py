@@ -88,7 +88,7 @@ def test_ai_mapping_is_used_and_checked_by_code(db):
     llm = p["llm"]
     assert llm["used"] is True and llm["model"] == MODEL_FAST and llm["error"] is None
     assert llm["cost_usd"] == pytest.approx((1800 * 1.0 + 400 * 5.0) / 1e6)
-    assert llm["sent"] == {"headers": 9, "samples_per_column": 5, "rows_sent": 0}
+    assert llm["sent"] == {"headers": 9, "samples_per_column": 0, "rows_sent": 0}
 
     by_col = {m["column"]: m for m in p["mapping"]}
     assert by_col["Nr."] == {**by_col["Nr."], "field": "request_id", "source": "ai"}
@@ -176,3 +176,32 @@ def test_ingest_path_uses_rules_unless_asked(db):
     messages = install(db, answer={"columns": [], "question": None})
     r = pipeline.ingest_path(SAMPLES / WASTE, con=db)
     assert messages.calls == [] and r["llm"]["used"] is False
+
+
+def sent_payload(messages: FakeMessages) -> dict:
+    prompt = messages.calls[0]["messages"][0]["content"]
+    return json.loads(prompt[prompt.index("{") :])
+
+
+def test_mapping_sends_no_cell_values_by_default(db):
+    messages = install(db, answer=REQUESTS_ANSWER)
+    pipeline.preview((SAMPLES / REQUESTS).read_bytes(), REQUESTS, con=db)
+
+    sent = sent_payload(messages)
+    assert sent["columns"] and all(c["samples"] == [] for c in sent["columns"])
+
+
+def test_mapping_sends_masked_samples_only_when_enabled(db, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("LLM_SEND_SAMPLES", "true")
+    get_settings.cache_clear()
+    try:
+        messages = install(db, answer=REQUESTS_ANSWER)
+        p = pipeline.preview((SAMPLES / REQUESTS).read_bytes(), REQUESTS, con=db)
+    finally:
+        get_settings.cache_clear()
+
+    assert p["llm"]["sent"]["samples_per_column"] == 5
+    sent = sent_payload(messages)
+    assert any(c["samples"] for c in sent["columns"])
